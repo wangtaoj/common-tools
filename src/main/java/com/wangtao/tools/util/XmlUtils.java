@@ -10,8 +10,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
-import org.apache.commons.lang3.StringUtils; // 假设使用 commons-lang3，如无则改用自己判空
+import org.apache.commons.lang3.StringUtils;
 
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
@@ -41,7 +42,7 @@ public final class XmlUtils {
 
     static {
         // 序列化包含策略
-        xmlMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        xmlMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
         // 禁用空 Bean 序列化失败
         xmlMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
         // 禁用未知属性反序列化失败
@@ -51,8 +52,9 @@ public final class XmlUtils {
         // 序列化时输出 XML 声明（<?xml version="1.0" encoding="UTF-8"?>）
         xmlMapper.enable(ToXmlGenerator.Feature.WRITE_XML_DECLARATION);
 
-        // 日期格式与时区
-        xmlMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+        // 设置全局的DateFormat
+        xmlMapper.setDateFormat(new SimpleDateFormat(JavaTimeModuleUtils.STANDARD_PATTERN));
+        // 设置全局的时区, Jackson默认值为UTC
         xmlMapper.setTimeZone(TimeZone.getDefault());
 
         // 注册 Java 8 时间模块
@@ -60,15 +62,15 @@ public final class XmlUtils {
     }
 
     private XmlUtils() {
-        // 私有构造器，防止实例化
+
     }
 
     /**
-     * 将 Java 对象序列化为 XML 字符串。
+     * 将Java对象序列化为XML字符串。
      *
      * @param obj 要序列化的对象
-     * @return XML 字符串；若 obj 为 null，返回 null（或空串，此处按常见习惯返回 null）
-     * @throws IllegalArgumentException 如果序列化失败（包装 Jackson 异常）
+     * @return XML字符串
+     * @throws IllegalArgumentException 如果序列化失败
      */
     public static String objToXml(Object obj) {
         if (obj == null) {
@@ -82,12 +84,12 @@ public final class XmlUtils {
     }
 
     /**
-     * 将 XML 字符串反序列化为指定类型的对象。
+     * 将XML字符串反序列化为指定类型的对象。
      *
-     * @param xml   XML 字符串
+     * @param xml   XML字符串
      * @param clazz 目标类型
      * @param <T>   泛型类型
-     * @return 反序列化后的对象；若 xml 为空或空白，返回 null
+     * @return 反序列化后的对象
      * @throws IllegalArgumentException 如果反序列化失败
      */
     public static <T> T xmlToObj(String xml, Class<T> clazz) {
@@ -102,37 +104,55 @@ public final class XmlUtils {
     }
 
     /**
-     * 将 XML 字符串反序列化为泛型类型（使用 TypeReference）。
+     * 将XML字符串反序列化为指定类型的对象。
      *
      * @param xml           XML 字符串
-     * @param typeReference 类型引用，例如 new TypeReference&lt;List&lt;Bean&gt;&gt;() {}
+     * @param typeReference 类型引用，例如{@code new TypeReference<User>() {}}
      * @param <T>           目标泛型类型
-     * @return 反序列化后的对象；若 xml 为空或空白，返回 null
+     * @return 反序列化后的对象
      * @throws IllegalArgumentException 如果反序列化失败
      */
-    public static <T> T xmlToObj(String xml, TypeReference<?> typeReference) {
+    public static <T> T xmlToObj(String xml, TypeReference<T> typeReference) {
         if (StringUtils.isBlank(xml)) {
             return null;
         }
         try {
-            // 注意：readValue 的 TypeReference 参数是 TypeReference<T>，但这里传入的是无界通配符，
-            // 实际调用时需保证类型匹配，返回类型强制转换是安全的。
-            @SuppressWarnings("unchecked")
-            T result = (T) xmlMapper.readValue(xml, typeReference);
-            return result;
+            return xmlMapper.readValue(xml, typeReference);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("XML deserialization error: " + xml, e);
         }
     }
 
     /**
-     * 将 XML 字符串反序列化为指定 JavaType 类型的对象。
+     * 将XML字符串反序列化为指定JavaType类型的对象。
      * JavaType 可通过 {@link #typeFactory()} 构建。
      *
-     * @param xml       XML 字符串
-     * @param javaType  Jackson 的 JavaType 对象
+     * @param xml       XML字符串
+     * @param type      Java类型
      * @param <T>       目标类型
-     * @return 反序列化后的对象；若 xml 为空或空白，返回 null
+     * @return 反序列化后的对象
+     * @throws IllegalArgumentException 如果反序列化失败
+     */
+    public static <T> T xmlToObj(String xml, Type type) {
+        if (StringUtils.isBlank(xml)) {
+            return null;
+        }
+        try {
+            JavaType javaType = typeFactory().constructType(type);
+            return xmlMapper.readValue(xml, javaType);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("XML deserialization error: " + xml, e);
+        }
+    }
+
+    /**
+     * 将XML字符串反序列化为指定JavaType类型的对象。
+     * JavaType 可通过 {@link #typeFactory()} 构建。
+     *
+     * @param xml       XML字符串
+     * @param javaType  Jackson的JavaType对象
+     * @param <T>       目标类型
+     * @return 反序列化后的对象
      * @throws IllegalArgumentException 如果反序列化失败
      */
     public static <T> T xmlToObj(String xml, JavaType javaType) {
@@ -147,31 +167,7 @@ public final class XmlUtils {
     }
 
     /**
-     * 将 XML 字符串反序列化为带有单个泛型参数的容器类型，
-     * 例如 {@code List<Bean>}，其中 baseClass = List.class，genericClass = Bean.class。
-     *
-     * @param xml          XML 字符串
-     * @param baseClass    容器类（如 List.class）
-     * @param genericClass 容器内元素类（如 Bean.class）
-     * @param <T>          容器类型
-     * @param <G>          泛型参数类型
-     * @return 反序列化后的对象；若 xml 为空或空白，返回 null
-     * @throws IllegalArgumentException 如果反序列化失败
-     */
-    public static <T, G> T xmlToObj(String xml, Class<T> baseClass, Class<G> genericClass) {
-        if (StringUtils.isBlank(xml)) {
-            return null;
-        }
-        try {
-            JavaType javaType = xmlMapper.getTypeFactory().constructParametricType(baseClass, genericClass);
-            return xmlMapper.readValue(xml, javaType);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("XML deserialization error: " + xml, e);
-        }
-    }
-
-    /**
-     * 获取当前 XmlMapper 的 TypeFactory，用于构建复杂的 JavaType。
+     * 获取当前XmlMapper的TypeFactory，用于构建复杂的JavaType。
      *
      * @return TypeFactory 实例
      */
