@@ -23,6 +23,7 @@
     <lombok.version>1.18.0</lombok.version>
     <jakarta-servlet.version>4.0.4</jakarta-servlet.version>
     <spring-framework.version>5.3.31</spring-framework.version>
+    <spring-data-redis.version>2.7.18</spring-data-redis.version>
     <jackson.version>2.13.5</jackson.version>
     <slf4j.version>1.7.36</slf4j.version>
     <logback.version>1.2.12</logback.version>
@@ -66,6 +67,17 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
       <version>${spring-framework.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>${spring-framework.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-redis</artifactId>
+      <version>${spring-data-redis.version}</version>
     </dependency>
 
     <!-- JSON序列化 -->
