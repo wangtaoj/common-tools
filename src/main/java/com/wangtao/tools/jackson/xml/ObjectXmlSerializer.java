@@ -11,11 +11,11 @@ import javax.xml.namespace.QName;
 import java.io.IOException;
 
 /**
- * 自定义 Jackson 序列化器，用于覆盖 XML 元素的标签名。
+ * 自定义 Jackson 序列化器，用于指定 XML 元素的标签名。
  * 实现 {@link ContextualSerializer} 接口，以便在序列化时动态获取 {@link XmlElement} 注解中指定的名称。
  * <p>
  * 使用方式：
- * 在需要自定义内层元素名称的 List 或容器字段上，同时标注：
+ * 在需要自定义名称的 List 或容器字段上，同时标注：
  * <pre>{@code
  * @XmlElement(localName = "bean")
  * @JsonSerialize(contentUsing = ObjectXmlSerializer.class)
@@ -41,28 +41,25 @@ import java.io.IOException;
 public class ObjectXmlSerializer extends JsonSerializer<Object> implements ContextualSerializer {
 
     /**
-     * 要覆盖的 XML 元素名称（标签名）。
+     * XML元素名称
      */
     private String elementName;
 
-    /**
-     * 默认无参构造（框架要求）。
-     */
     public ObjectXmlSerializer() {
-        // 无操作
+
     }
 
     /**
      * 带元素名称的构造方法，由 {@link #createContextual} 调用。
      *
-     * @param elementName 指定的 XML 标签名
+     * @param elementName XML元素名称
      */
     public ObjectXmlSerializer(String elementName) {
         this.elementName = elementName;
     }
 
     /**
-     * 序列化方法，覆盖当前节点的标签名。
+     * 序列化方法，覆盖当前节点的元素名称。
      *
      * @param object     要序列化的对象
      * @param gen        JSON 生成器（实际为 {@link ToXmlGenerator}）
@@ -75,7 +72,10 @@ public class ObjectXmlSerializer extends JsonSerializer<Object> implements Conte
             throw new IllegalArgumentException("elementName is null, please use @XmlElement to set the element name");
         }
 
-        // 将当前节点标签名替换为指定的 elementName
+        /*
+         * 此时的nextName为@JacksonXmlProperty指定的名称
+         * 将当前节点元素名替换为指定的elementName
+         */
         ToXmlGenerator xmlGen = (ToXmlGenerator) gen;
         xmlGen.setNextName(new QName(this.elementName));
 
@@ -98,7 +98,6 @@ public class ObjectXmlSerializer extends JsonSerializer<Object> implements Conte
         if (annotation != null) {
             return new ObjectXmlSerializer(annotation.localName());
         }
-        // 未标注注解时，返回 null，让 Jackson 使用默认行为
         return this;
     }
 }
