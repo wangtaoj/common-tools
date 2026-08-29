@@ -14,7 +14,7 @@ public interface DistributedLock {
      * 尝试加锁
      *
      * @param key      锁的key
-     * @param timeout  超时时间
+     * @param timeout  锁的过期时间
      * @param timeUnit 时间单位
      * @return true-加锁成功，false-加锁失败
      */

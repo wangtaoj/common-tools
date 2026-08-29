@@ -22,7 +22,7 @@ public class DistributedLockHelper {
      * 加锁成功则执行Runnable，自动释放锁（无返回值）
      *
      * @param key      锁的key
-     * @param timeout  超时时间
+     * @param timeout  锁的过期时间
      * @param timeUnit 时间单位
      * @param runnable 加锁成功后执行的任务
      */
@@ -48,7 +48,7 @@ public class DistributedLockHelper {
      * 注意：业务方法不允许返回null，否则无法区分加锁成功但返回null的情况，会直接抛出异常
      *
      * @param key      锁的key
-     * @param timeout  超时时间
+     * @param timeout  锁的过期时间
      * @param timeUnit 时间单位
      * @param callable 加锁成功后执行的任务
      * @param <T>      返回结果类型
