@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>pdf-test</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 40pt;
+        }
+        body {
+            font-family: STSong-Light, serif;
+        }
+    </style>
+</head>
+<body>
+<h1 th:text="${title}">default</h1>
+<p th:text="${'hello, ' + name}">desc</p>
+<p th:text="${#temporals.format(localDateTime, 'yyyy-MM-dd HH:mm:ss')}">time</p>
+<div style="height: 1200px">长内容触发多页</div>
+</body>
+</html>
