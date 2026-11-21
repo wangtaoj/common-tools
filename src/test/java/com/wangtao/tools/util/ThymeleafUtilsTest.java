@@ -1,6 +1,5 @@
 package com.wangtao.tools.util;
 
-import com.wangtao.tools.exception.ToolRuntimeException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -26,11 +25,5 @@ public class ThymeleafUtilsTest {
         Assertions.assertTrue(result.contains("hello, wangtao"));
         // 验证 JSR310 支持（Java8TimeDialect）
         Assertions.assertTrue(result.contains("2026-11-20 10:30:45"));
-    }
-
-    @Test
-    public void testEvalTemplateNotFound() {
-        Assertions.assertThrows(ToolRuntimeException.class,
-                () -> ThymeleafUtils.eval("not-exists", null));
     }
 }

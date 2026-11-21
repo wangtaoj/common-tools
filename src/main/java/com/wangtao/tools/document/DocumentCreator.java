@@ -27,7 +27,6 @@ public interface DocumentCreator {
      * @param data          模板数据
      * @param watermarkText 水印文字
      * @param out           文档输出流，由调用方负责关闭
-     *
      */
     void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out);
 
