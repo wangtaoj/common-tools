@@ -2,10 +2,11 @@ package com.wangtao.tools.document;
 
 import com.wangtao.tools.exception.ToolRuntimeException;
 import com.wangtao.tools.util.ThymeleafUtils;
-import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -38,9 +39,12 @@ public class HtmlDocumentCreator implements DocumentCreator {
      */
     @Override
     public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
-        String html = ThymeleafUtils.eval(templatePath, data);
+        // 流式渲染，避免中间 String 全量拷贝；
+        // Writer 只 flush 不 close，out 的关闭由调用方负责
+        Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
         try {
-            IOUtils.write(html, out, StandardCharsets.UTF_8);
+            ThymeleafUtils.eval(templatePath, data, writer);
+            writer.flush();
         } catch (IOException e) {
             throw new ToolRuntimeException(e);
         }
