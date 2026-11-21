@@ -31,6 +31,11 @@ public class HtmlDocumentCreator implements DocumentCreator {
         createWithWatermark(templatePath, data, null, out);
     }
 
+    /**
+     * 会忽略水印
+     * <p>
+     * {@inheritDoc}
+     */
     @Override
     public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
         String html = ThymeleafUtils.eval(templatePath, data);

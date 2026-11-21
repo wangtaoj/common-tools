@@ -36,12 +36,17 @@ public class WordDocumentCreator implements DocumentCreator {
         createWithWatermark(templatePath, data, null, out);
     }
 
+    /**
+     * 会忽略水印
+     * <p>
+     * {@inheritDoc}
+     */
     @Override
     public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
         String html = ThymeleafUtils.eval(templatePath, data);
         byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
         try (InputStream is = new ByteArrayInputStream(bytes);
-             POIFSFileSystem fs = new POIFSFileSystem(is)) {
+             POIFSFileSystem fs = new POIFSFileSystem()) {
             DirectoryNode root = fs.getRoot();
             root.createDocument("WordDocument", is);
             fs.writeFilesystem(out);
