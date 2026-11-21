@@ -28,11 +28,9 @@ import java.util.Map;
 public class PdfDocumentCreator implements DocumentCreator {
 
     /**
-     * 水印文字的字体，STSong-Light 为 openpdf 内置 CJK 字体，支持中文（不内嵌，依赖阅读器字体）
+     * 水印文字字体文件（fonts 目录内），以内嵌方式写入 PDF，任何阅读器均可显示
      */
-    private static final String WATERMARK_FONT = "STSong-Light";
-
-    private static final String WATERMARK_ENCODING = "UniGB-UCS2-H";
+    private static final String WATERMARK_FONT = FontRegistrar.FONT_DIR + "LXGWWenKai-Regular.ttf";
 
     /**
      * 水印文字大小
@@ -82,6 +80,9 @@ public class PdfDocumentCreator implements DocumentCreator {
                                     OutputStream out, String watermarkText) {
         String html = ThymeleafUtils.eval(templatePath, data);
         ITextRenderer renderer = new ITextRenderer();
+        // 自动注册 fonts 目录下的字体，模板 CSS font-family 写字体族名即可命中；
+        // 相对路径由 openpdf 自动回退 classpath 加载，jar 包与本地文件系统均兼容
+        FontRegistrar.registerTo(renderer.getFontResolver());
         renderer.setDocumentFromString(html, null);
         renderer.layout();
         boolean hasWatermark = StringUtils.isNotBlank(watermarkText);
@@ -183,8 +184,8 @@ public class PdfDocumentCreator implements DocumentCreator {
         @Override
         public void onEndPage(PdfWriter writer, Document document) {
             try {
-                BaseFont font = BaseFont.createFont(WATERMARK_FONT, WATERMARK_ENCODING,
-                        BaseFont.NOT_EMBEDDED);
+                BaseFont font = BaseFont.createFont(WATERMARK_FONT,
+                        BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
                 PdfContentByte canvas = writer.getDirectContent();
                 PdfGState gs = new PdfGState();
                 gs.setFillOpacity(WATERMARK_OPACITY);
@@ -218,12 +219,9 @@ public class PdfDocumentCreator implements DocumentCreator {
     private static class PageNumberPageEvent extends PdfPageEventHelper {
 
         /**
-         * 页码文字字体，页码含中文（"第 x 页 / 共 y 页"），
-         * 使用内置 CJK 字体 STSong-Light 保证中文正常显示
+         * 页码文字字体文件（fonts 目录内），页码含中文（"第 x 页 / 共 y 页"）
          */
-        private static final String FONT_NAME = "STSong-Light";
-
-        private static final String FONT_ENCODING = "UniGB-UCS2-H";
+        private static final String FONT_NAME = FontRegistrar.FONT_DIR + "LXGWWenKai-Regular.ttf";
 
         /**
          * 页码文字大小
@@ -247,7 +245,8 @@ public class PdfDocumentCreator implements DocumentCreator {
                 if (totalPageTemplate == null) {
                     totalPageTemplate = PdfTemplate.createTemplate(writer, 50, 16);
                 }
-                BaseFont font = BaseFont.createFont(FONT_NAME, FONT_ENCODING, BaseFont.NOT_EMBEDDED);
+                BaseFont font = BaseFont.createFont(FONT_NAME,
+                        BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
                 PdfContentByte canvas = writer.getDirectContent();
                 canvas.saveState();
                 canvas.beginText();
@@ -270,7 +269,8 @@ public class PdfDocumentCreator implements DocumentCreator {
         @Override
         public void onCloseDocument(PdfWriter writer, Document document) {
             try {
-                BaseFont font = BaseFont.createFont(FONT_NAME, FONT_ENCODING, BaseFont.NOT_EMBEDDED);
+                BaseFont font = BaseFont.createFont(FONT_NAME,
+                        BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
                 // 文档即将关闭时页码为最后一页，即总页数
                 String text = String.format("%d 页", document.getPageNumber() - 1);
                 totalPageTemplate.beginText();
