@@ -52,7 +52,7 @@ public class DocumentCreatorTest {
     @Test
     public void testCreateWord() throws Exception {
         Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("word-test.doc");
+        Path path = OUTPUT_DIR.resolve("word-test.docx");
         try (OutputStream out = new FileOutputStream(path.toFile())) {
             DocumentCreator.getInstance(DocumentType.WORD).create("pdf-test", data, out);
         }
