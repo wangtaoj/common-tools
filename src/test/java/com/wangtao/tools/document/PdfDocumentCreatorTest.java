@@ -24,7 +24,7 @@ public class PdfDocumentCreatorTest {
      */
     private static final Path OUTPUT_DIR = Paths.get("target");
 
-    private final DocumentCreator documentCreator = PdfDocumentCreator.getInstance();
+    private final DocumentCreator documentCreator = DocumentCreator.getInstance(DocumentType.PDF);
 
     @Test
     public void testCreate() throws Exception {
@@ -41,7 +41,7 @@ public class PdfDocumentCreatorTest {
         Map<String, Object> data = data();
         Path path = OUTPUT_DIR.resolve("pdf-test-watermark.pdf");
         try (OutputStream out = new FileOutputStream(path.toFile())) {
-            documentCreator.createWithWatermark("pdf-test", data, out, "机密文件");
+            documentCreator.createWithWatermark("pdf-test", data, "机密文件", out);
         }
         verifyPdf(path);
         log.info("水印版 PDF 写入: {}", path.toAbsolutePath());

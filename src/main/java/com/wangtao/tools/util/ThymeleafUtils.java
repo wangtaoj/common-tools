@@ -1,13 +1,11 @@
 package com.wangtao.tools.util;
 
-import com.wangtao.tools.exception.ToolRuntimeException;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.extras.java8time.dialect.Java8TimeDialect;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Map;
 
@@ -50,12 +48,20 @@ public final class ThymeleafUtils {
         if (data != null) {
             context.setVariables(data);
         }
-        try (Writer writer = new StringWriter()) {
-            ENGINE.process(templatePath, context, writer);
-            return writer.toString();
-        } catch (Exception e) {
-            // 模板不存在、模板语法错误、变量解析失败等统一包装
-            throw new ToolRuntimeException(e);
+        return ENGINE.process(templatePath, context);
+    }
+
+    /**
+     * 渲染html模板
+     * @param templatePath html模板路径（相对 classpath 的 template 目录，不含前缀与 .html 后缀）
+     * @param data 模板数据
+     * @param writer 输出流
+     */
+    public static void eval(String templatePath, Map<String, Object> data, Writer writer) {
+        Context context = new Context();
+        if (data != null) {
+            context.setVariables(data);
         }
+        ENGINE.process(templatePath, context, writer);
     }
 }

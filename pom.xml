@@ -34,7 +34,7 @@
     <thymeleaf.version>3.0.15.RELEASE</thymeleaf.version>
     <thymeleaf-extras-java8time.version>3.0.4.RELEASE</thymeleaf-extras-java8time.version>
     <flying-saucer-pdf.version>9.4.1</flying-saucer-pdf.version>
-
+    <poi.version>5.4.1</poi.version>
   </properties>
 
   <dependencies>
@@ -137,6 +137,12 @@
       <groupId>org.xhtmlrenderer</groupId>
       <artifactId>flying-saucer-pdf</artifactId>
       <version>${flying-saucer-pdf.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>${poi.version}</version>
     </dependency>
 
     <dependency>

@@ -64,7 +64,7 @@ public class PdfDocumentCreator implements DocumentCreator {
     }
 
     /**
-     * @return 单例实例（饿汉式）
+     * @return 单例实例
      */
     public static PdfDocumentCreator getInstance() {
         return INSTANCE;
@@ -72,12 +72,11 @@ public class PdfDocumentCreator implements DocumentCreator {
 
     @Override
     public void create(String templatePath, Map<String, Object> data, OutputStream out) {
-        createWithWatermark(templatePath, data, out, null);
+        createWithWatermark(templatePath, data, null, out);
     }
 
     @Override
-    public void createWithWatermark(String templatePath, Map<String, Object> data,
-                                    OutputStream out, String watermarkText) {
+    public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
         String html = ThymeleafUtils.eval(templatePath, data);
         ITextRenderer renderer = new ITextRenderer();
         // 自动注册 fonts 目录下的字体，模板 CSS font-family 写字体族名即可命中；
