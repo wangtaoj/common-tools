@@ -81,6 +81,7 @@ macOS 注意：系统**没有** `SimSun`/`SimHei` 等字体，对应物是 `Song
 ### 其它转换能力与限制
 
 - 支持：h1-h6、段落、行内格式（b/i/u/span）、表格（含 colspan/rowspan、边框底色）、ul/ol 列表（实现内已挂载默认 numbering 定义）、div 嵌套
+- h1-h6 会映射到 Word 内置标题样式（Heading1/Heading2...，样式自带 outlineLvl 大纲级别），Word 的导航窗格 / 大纲视图 / 目录（TOC）可识别；该映射由 `docx4j-ImportXHTML.properties` 中的 `docx4j-ImportXHTML.Element.Heading.MapToStyle=true` 开启（默认关闭，关闭时 h1-h6 只保留字号加粗的直接格式，无大纲级别）
 - CSS 支持**常用子集**：字体、颜色、对齐、边框、背景、间距生效；**float 布局、flex、position 等现代排版不支持**——这些在 Word 中没有自然对应物，模板中应避免
 - 转换是**一次性语义映射**，不是像素级还原：html 的视觉效果与 docx 的最终排版不会完全一致（尤其复杂嵌套表格、混合对齐）
 - 页码（"第 x 页 / 共 y 页"）：docx4j 无一步到位 API，需手工插入 PAGE / NUMPAGES 域代码的页脚，当前实现未包含
