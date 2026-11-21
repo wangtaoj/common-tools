@@ -11,6 +11,10 @@
     <!-- 项目包 debug 级别 -->
     <logger name="com.wangtao.tools" level="DEBUG"/>
 
+    <!-- docx4j：XmlUtils 会无条件 WARN 实际使用的 XML 解析器（信息性提示），
+         XHTMLImporterImpl 对每个不支持的 CSS 属性打 WARN，均压制为 ERROR -->
+    <logger name="org.docx4j" level="ERROR"/>
+
     <!-- root 默认 info 级别 -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
