@@ -11,6 +11,10 @@
         body {
             font-family: "LXGW WenKai", serif;
         }
+        tr {
+            /* 避免表格行跨页分裂 */
+            page-break-inside: avoid
+        }
         h2 {
             border-bottom: 2px solid #333;
             padding-bottom: 4pt;
@@ -30,7 +34,8 @@
             width: 15%;
         }
         .env-image {
-            width: 100%;
+            width: 200px;
+            height: auto;
             margin: 8pt 0;
         }
         .remark {
@@ -93,6 +98,19 @@
         <td th:text="${contactPhone}">-</td>
         <th>客户等级</th>
         <td th:text="${customerLevel}">-</td>
+    </tr>
+    <tr>
+        <th>详情地址</th>
+        <td colspan="3" th:text="${addrInfo}">-</td>
+    </tr>
+    <tr>
+        <th rowspan="2">经营信息</th>
+        <th>财务情况</th>
+        <td colspan="2">非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好</td>
+    </tr>
+    <tr>
+        <th>人才资质</th>
+        <td colspan="2">非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好非常好</td>
     </tr>
 </table>
 

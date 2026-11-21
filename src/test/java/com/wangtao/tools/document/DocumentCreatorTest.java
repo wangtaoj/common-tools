@@ -60,6 +60,17 @@ public class DocumentCreatorTest {
     }
 
     @Test
+    public void testCreateFakeWord() throws Exception {
+        Map<String, Object> data = data();
+        Path path = OUTPUT_DIR.resolve("fakeWord-test.doc");
+        try (OutputStream out = new FileOutputStream(path.toFile())) {
+            // html伪装word
+            FakeWordDocumentCreator.getInstance().create("pdf-test", data, out);
+        }
+        log.info("Word 写入: {}", path.toAbsolutePath());
+    }
+
+    @Test
     public void testCreateHtml() throws Exception {
         Map<String, Object> data = data();
         Path path = OUTPUT_DIR.resolve("html-test.html");
@@ -103,6 +114,7 @@ public class DocumentCreatorTest {
         data.put("accountManager", "李四");
         data.put("contactPhone", "0571-88888888");
         data.put("customerLevel", "A级");
+        data.put("addrInfo", "湖南省长沙市岳麓区金州大道583号");
         data.put("environmentDesc", "公司位于某某科技园区内，周边交通便捷，紧邻地铁2号线某某站，周边商业配套完善，企业聚集度高，营商环境良好。");
         data.put("environmentDesc2", "厂区外观整洁，绿化覆盖率高，办公与生产区域规划合理，无周边污染源，满足生产经营要求。");
         // 图片转 base64 内嵌（html 使用 data URI 格式）
