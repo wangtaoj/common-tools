@@ -34,6 +34,27 @@ html "变成 Word 文档"有三种技术路线，本质完全不同，按兼容�
 
 **共同结论**：`WordDocument` 流里没有合法的 doc 二进制结构（FIB），Word 的二进制解析必然失败，两种方式都依赖 Word 的降级/容错逻辑。真正的 doc 二进制格式没有开源库能从零生成（POI 的 HWPF 只能修改已有 doc），需要 .doc 时务实做法是生成 docx 后在 Word 中另存为 97-2003 格式。
 
+#### 页面视图控制（Word HTML 元数据）
+
+两种伪装方式最终都靠 Word/WPS 的 html 导入层渲染。默认情况下 html 没有视图指令，WPS 检测到内容是网页后会以 **Web 视图**打开（Word 则以页面视图导入）。解决方式是注入 **Word HTML 官方格式**的文档元数据——Word 自己"另存为网页"时就会写入：
+
+```html
+<html xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+    <!--[if gte mso 9]>
+    <xml>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+```
+
+- 条件注释形式：浏览器当普通注释忽略，Office 组件的 html 导入层解析 `<xml>` 块并遵从 `View` 设置，`w:View>Print</w:View>`含义 Print = 页面视图(Web = web 视图)
+- **由模板声明**：视图属于文档的展示语义，直接写在模板中（html 根标签加 `xmlns:w` 命名空间、head 内加 `w:WordDocument` 块），`FakeWordDocumentCreator` 保持纯容器封装不做内容改写；同一模板对浏览器完全无害（就是注释），PDF/docx 链路亦不受影响（`xmlns:w` 是合法 XML 命名空间声明且无元素使用）
+- 同一机制可扩展更多文档级设置（如默认字号、页边距），是 Word HTML 格式的标准组成部分，非 hack
+
 ### 依赖（真 docx 方式）
 
 | 依赖 | 版本 | 说明 |

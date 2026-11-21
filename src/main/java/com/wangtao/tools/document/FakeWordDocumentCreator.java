@@ -13,6 +13,8 @@ import java.util.Map;
 
 /**
  * 伪 Word 文档创建器：将 html 内容包装进 OLE2 容器伪装成 .doc
+ * <p>视图控制（页面视图/Web 视图）等 Word HTML 元数据由模板声明，
+ * 见模板 head 内的 {@code <w:WordDocument>} 条件注释块
  * <p>仅骗过文件类型检测，Word 打开时依赖其 HTML 导入转换器渲染，
  * 兼容性差（新版 Word 常提示文件损坏，第三方软件基本不认），
  * 正式场景请使用基于 docx4j 的 {@link WordDocumentCreator}
