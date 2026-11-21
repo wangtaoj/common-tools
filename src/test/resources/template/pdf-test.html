@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8"/>
-    <title>pdf-test</title>
+    <title>企业客户报告</title>
     <style>
         @page {
             size: A4;
@@ -11,12 +11,96 @@
         body {
             font-family: "LXGW WenKai", serif;
         }
+        h2 {
+            border-bottom: 2px solid #333;
+            padding-bottom: 4pt;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .info-table th, .info-table td {
+            border: 1px solid #999;
+            padding: 6pt 8pt;
+            font-size: 10pt;
+        }
+        .info-table th {
+            background-color: #eef2f7;
+            font-weight: normal;
+            width: 15%;
+        }
+        .env-image {
+            width: 100%;
+            margin: 8pt 0;
+        }
+        .remark {
+            font-size: 10pt;
+            color: #555;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
-<h1 th:text="${title}">default</h1>
-<p th:text="${'hello, ' + name}">desc</p>
-<p th:text="${#temporals.format(localDateTime, 'yyyy-MM-dd HH:mm:ss')}">time</p>
-<div style="height: 1200px">长内容触发多页</div>
+<h1 style="text-align: center">企业客户报告</h1>
+<p style="text-align: center" th:text="${#temporals.format(reportTime, 'yyyy年MM月dd日 HH:mm:ss')}">2026年01月01日 00:00:00</p>
+
+<h2>一、客户基本信息</h2>
+<table class="info-table">
+    <tr>
+        <th>客户姓名</th>
+        <td th:text="${customerName}">-</td>
+        <th>客户编号</th>
+        <td th:text="${customerNo}">-</td>
+    </tr>
+    <tr>
+        <th>证件类型</th>
+        <td th:text="${certType}">-</td>
+        <th>证件号码</th>
+        <td th:text="${certNo}">-</td>
+    </tr>
+    <tr>
+        <th>企业名称</th>
+        <td th:text="${companyName}">-</td>
+        <th>统一社会信用代码</th>
+        <td th:text="${creditCode}">-</td>
+    </tr>
+    <tr>
+        <th>所属行业</th>
+        <td th:text="${industry}">-</td>
+        <th>企业规模</th>
+        <td th:text="${companySize}">-</td>
+    </tr>
+    <tr>
+        <th>注册资本</th>
+        <td th:text="${registeredCapital}">-</td>
+        <th>成立日期</th>
+        <td th:text="${#temporals.format(foundDate, 'yyyy-MM-dd')}">-</td>
+    </tr>
+    <tr>
+        <th>经营状态</th>
+        <td th:text="${businessStatus}">-</td>
+        <th>经营年限</th>
+        <td th:text="${businessYears}">-</td>
+    </tr>
+    <tr>
+        <th>客户经理</th>
+        <td th:text="${accountManager}">-</td>
+        <th>报告日期</th>
+        <td th:text="${#temporals.format(reportTime, 'yyyy-MM-dd')}">-</td>
+    </tr>
+    <tr th:if="${contactPhone != null}">
+        <th>联系电话</th>
+        <td th:text="${contactPhone}">-</td>
+        <th>客户等级</th>
+        <td th:text="${customerLevel}">-</td>
+    </tr>
+</table>
+
+<h2>二、企业周边环境</h2>
+<p class="remark" th:text="${environmentDesc}">-</p>
+<img class="env-image" th:src="${surroundingImage}"/>
+<p class="remark" th:text="${environmentDesc2}">-</p>
+<img class="env-image" th:src="${surroundingImage2}"/>
+
 </body>
 </html>
