@@ -7,7 +7,6 @@ import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
 
 import java.io.OutputStream;
-import java.io.StringReader;
 import java.util.Map;
 
 /**
@@ -51,6 +50,7 @@ public class WordDocumentCreator implements DocumentCreator {
         try {
             // 空白 docx 包，列表编号支持需挂载默认 numbering 定义
             WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.createPackage();
+            // 针对<ul>以及<ol>定义编号规则
             NumberingDefinitionsPart ndp = new NumberingDefinitionsPart();
             wordMLPackage.getMainDocumentPart().addTargetPart(ndp);
             ndp.unmarshalDefaultNumbering();
@@ -58,7 +58,7 @@ public class WordDocumentCreator implements DocumentCreator {
             // html 转换为 docx 内容元素并挂到主文档
             XHTMLImporterImpl importer = new XHTMLImporterImpl(wordMLPackage);
             wordMLPackage.getMainDocumentPart().getContent()
-                    .addAll(importer.convert(new StringReader(html), null));
+                    .addAll(importer.convert(html, null));
 
             // 序列化输出；write 只写不关闭，out 的关闭由调用方负责
             wordMLPackage.save(out);
