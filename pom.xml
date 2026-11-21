@@ -27,6 +27,7 @@
     <jackson.version>2.13.5</jackson.version>
     <slf4j.version>1.7.36</slf4j.version>
     <logback.version>1.2.12</logback.version>
+    <log4j-to-slf4j.version>2.17.2</log4j-to-slf4j.version>
     <junit.version>5.8.2</junit.version>
     <mockito-junit.version>4.5.1</mockito-junit.version>
     <junit-platform-launcher.version>1.8.2</junit-platform-launcher.version>
@@ -35,8 +36,6 @@
     <thymeleaf-extras-java8time.version>3.0.4.RELEASE</thymeleaf-extras-java8time.version>
     <flying-saucer-pdf.version>9.4.1</flying-saucer-pdf.version>
     <poi.version>5.4.1</poi.version>
-
-    <!-- docx4j 11.x 需要 JDK11+, 8.3.x 支持 JDK8 -->
     <docx4j.version>8.3.15</docx4j.version>
   </properties>
 
@@ -116,6 +115,12 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-to-slf4j</artifactId>
+      <version>${log4j-to-slf4j.version}</version>
     </dependency>
 
     <dependency>
