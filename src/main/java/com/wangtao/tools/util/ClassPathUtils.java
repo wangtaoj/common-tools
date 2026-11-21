@@ -12,7 +12,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * 类路径资源工具类，列出 classpath 目录下的资源文件名，兼容文件系统与 jar 包部署
+ * 类路径资源工具类
  *
  * @author wangtao
  * Created at 2026-11-21
@@ -24,8 +24,10 @@ public final class ClassPathUtils {
     }
 
     /**
+     * 兼容本地文件系统以及jar文件
      * 列出 classpath 指定目录下所有文件的资源名（不含目录前缀，如 "LXGWWenKai-Regular.ttf"），
      * 不递归子目录
+     *
      * @param directory classpath 目录路径（如 "fonts/"）
      * @return 目录下的文件资源名列表
      */
@@ -34,7 +36,9 @@ public final class ClassPathUtils {
     }
 
     /**
+     * 兼容本地文件系统以及jar文件
      * 列出 classpath 指定目录下所有文件的资源名（不含目录前缀，如 "LXGWWenKai-Regular.ttf"）
+     *
      * @param directory classpath 目录路径（如 "fonts/"），需以 "/" 结尾
      * @param recursive 是否递归读取子目录
      * @return 相对该目录的文件资源名列表（递归时含子目录路径，如 "sub/xxx.ttf"）
@@ -77,7 +81,7 @@ public final class ClassPathUtils {
         for (File file : files) {
             if (file.isDirectory()) {
                 if (recursive) {
-                    listFromFileSystem(file, prefix + file.getName() + "/", recursive, fileNames);
+                    listFromFileSystem(file, prefix + file.getName() + "/", true, fileNames);
                 }
             } else {
                 fileNames.add(prefix + file.getName());
@@ -95,10 +99,10 @@ public final class ClassPathUtils {
             Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
                 String name = entries.nextElement().getName();
-                if (!name.startsWith(prefix) || name.equals(prefix)) {
+                if (!name.startsWith(prefix)) {
                     continue;
                 }
-                // 目录条目以 "/" 结尾
+                // 目录条目以 "/" 结尾, 排除掉目录, 只需要目录下的文件
                 if (name.endsWith("/")) {
                     continue;
                 }
