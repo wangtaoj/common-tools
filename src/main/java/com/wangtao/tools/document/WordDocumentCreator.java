@@ -2,11 +2,23 @@ package com.wangtao.tools.document;
 
 import com.wangtao.tools.exception.ToolRuntimeException;
 import com.wangtao.tools.util.ThymeleafUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
+import org.docx4j.wml.SectPr;
+import org.docx4j.wml.Tbl;
+import org.docx4j.wml.TblGrid;
+import org.docx4j.wml.TblGridCol;
+import org.docx4j.wml.TblWidth;
+import org.docx4j.wml.Tc;
+import org.docx4j.wml.Tr;
 
+import javax.xml.bind.JAXBElement;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,6 +31,7 @@ import java.util.Map;
  * @author wangtao
  * Created at 2026-11-21
  */
+@Slf4j
 public class WordDocumentCreator implements DocumentCreator {
 
     private static final WordDocumentCreator INSTANCE = new WordDocumentCreator();
@@ -60,10 +73,165 @@ public class WordDocumentCreator implements DocumentCreator {
             wordMLPackage.getMainDocumentPart().getContent()
                     .addAll(importer.convert(html, null));
 
+            // 修正固定布局表格的列宽（docx4j 按自身布局宽度计算，可能超出 Word 页面内容宽）
+            normalizeFixedTableWidths(wordMLPackage);
+
             // 序列化输出；write 只写不关闭，out 的关闭由调用方负责
             wordMLPackage.save(out);
         } catch (Exception e) {
             throw new ToolRuntimeException(e);
         }
+    }
+
+    /**
+     * 修正固定布局（table-layout: fixed）表格的列宽：
+     * docx4j 按自身布局宽度计算列宽，生成的 tblGrid 可能超出 Word 页面内容宽，
+     * 而 Word 对固定布局表格严格按 tblGrid 渲染，导致表格溢出页面不可见。
+     * <p>此处将超出内容宽的固定布局表格按比例缩放到页面内容宽（保留列宽比例）
+     */
+    private void normalizeFixedTableWidths(WordprocessingMLPackage wordMLPackage) {
+        SectPr sectPr = wordMLPackage.getMainDocumentPart().getJaxbElement().getBody().getSectPr();
+        int contentWidth = getContentWidth(sectPr);
+        if (contentWidth <= 0) {
+            return;
+        }
+        for (Object content : wordMLPackage.getMainDocumentPart().getContent()) {
+            normalizeTable(content, contentWidth);
+        }
+    }
+
+    /**
+     * 页面内容宽度（twips）= 页面宽度 - 左右页边距
+     */
+    private int getContentWidth(SectPr sectPr) {
+        if (sectPr == null || sectPr.getPgSz() == null || sectPr.getPgSz().getW() == null) {
+            return 0;
+        }
+        int width = sectPr.getPgSz().getW().intValue();
+        SectPr.PgMar pageMar = sectPr.getPgMar();
+        if (pageMar != null) {
+            if (pageMar.getLeft() != null) {
+                width -= pageMar.getLeft().intValue();
+            }
+            if (pageMar.getRight() != null) {
+                width -= pageMar.getRight().intValue();
+            }
+        }
+        return width;
+    }
+
+    /**
+     * 处理单个内容对象中的表格（兼容 JAXBElement 包装）
+     */
+    private void normalizeTable(Object content, int contentWidth) {
+        Object value = unwrap(content);
+        if (value instanceof Tbl) {
+            normalizeTable((Tbl) value, contentWidth);
+        }
+    }
+
+    /**
+     * 取出表格的行（docx4j 8.x 使用内容模型，Tr 在 content 列表中）
+     */
+    private List<Tr> getRows(Tbl tbl) {
+        List<Tr> rows = new ArrayList<>();
+        for (Object o : tbl.getContent()) {
+            Object value = unwrap(o);
+            if (value instanceof Tr) {
+                rows.add((Tr) value);
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * 取出行的单元格（docx4j 8.x 使用内容模型，Tc 在 content 列表中）
+     */
+    private List<Tc> getCells(Tr row) {
+        List<Tc> cells = new ArrayList<>();
+        for (Object o : row.getContent()) {
+            Object value = unwrap(o);
+            if (value instanceof Tc) {
+                cells.add((Tc) value);
+            }
+        }
+        return cells;
+    }
+
+    /**
+     * 去除 JAXBElement 包装
+     */
+    private Object unwrap(Object content) {
+        return content instanceof JAXBElement ? ((JAXBElement<?>) content).getValue() : content;
+    }
+
+    /**
+     * 按比例缩放固定布局表格：tblGrid 列宽与各单元格 tcW 同步缩放，保持列宽比例
+     */
+    private void normalizeTable(Tbl tbl, int contentWidth) {
+        // 先处理单元格内嵌套的表格
+        List<Tr> rows = getRows(tbl);
+        for (Tr row : rows) {
+            for (Tc cell : getCells(row)) {
+                if (cell.getContent() != null) {
+                    for (Object cellContent : cell.getContent()) {
+                        normalizeTable(cellContent, contentWidth);
+                    }
+                }
+            }
+        }
+        // 仅处理固定布局表格（自动布局由 Word 自行适配，无需处理）
+        if (tbl.getTblPr() == null || tbl.getTblPr().getTblLayout() == null
+                || !"fixed".equals(tbl.getTblPr().getTblLayout().getType().value())) {
+            return;
+        }
+        TblGrid grid = tbl.getTblGrid();
+        if (grid == null || grid.getGridCol().isEmpty()) {
+            return;
+        }
+        int totalWidth = 0;
+        for (TblGridCol gridCol : grid.getGridCol()) {
+            if (gridCol.getW() != null) {
+                totalWidth += gridCol.getW().intValue();
+            }
+        }
+        if (totalWidth <= contentWidth) {
+            return;
+        }
+        double ratio = (double) contentWidth / totalWidth;
+        // 逐列按比例缩放（向下取整），余量补到最后一列，避免四舍五入后再次超出内容宽
+        List<TblGridCol> gridCols = grid.getGridCol();
+        int scaledTotal = 0;
+        for (int i = 0; i < gridCols.size(); i++) {
+            TblGridCol gridCol = gridCols.get(i);
+            if (gridCol.getW() == null) {
+                continue;
+            }
+            int scaled = i == gridCols.size() - 1
+                    ? contentWidth - scaledTotal
+                    : (int) Math.floor(gridCol.getW().longValue() * ratio);
+            scaled = Math.max(1, scaled);
+            gridCol.setW(BigInteger.valueOf(scaled));
+            scaledTotal += scaled;
+        }
+        for (Tr row : rows) {
+            for (Tc cell : getCells(row)) {
+                if (cell.getTcPr() != null && cell.getTcPr().getTcW() != null
+                        && TblWidth.TYPE_DXA.equals(cell.getTcPr().getTcW().getType())) {
+                    TblWidth tcW = cell.getTcPr().getTcW();
+                    if (tcW.getW() != null) {
+                        tcW.setW(BigInteger.valueOf(scale(tcW.getW(), ratio)));
+                    }
+                }
+            }
+        }
+        log.debug("固定布局表格宽度 {} 超出页面内容宽 {}，已按比例缩放", totalWidth, contentWidth);
+    }
+
+    /**
+     * 按比例缩放 twips 值，最小为 1
+     */
+    private long scale(BigInteger value, double ratio) {
+        return Math.max(1L, Math.round(value.longValue() * ratio));
     }
 }
