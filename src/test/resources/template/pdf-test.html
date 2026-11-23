@@ -31,6 +31,7 @@
         .info-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
         .info-table th, .info-table td {
             border: 1px solid #999;
@@ -60,6 +61,12 @@
 
 <h2>一、客户基本信息</h2>
 <table class="info-table">
+    <colgroup>
+        <col style="width: 20%;" />
+        <col style="width: 30%;" />
+        <col style="width: 20%;" />
+        <col style="width: 30%;" />
+    </colgroup>
     <tr>
         <th>客户姓名</th>
         <td th:text="${customerName}">-</td>

@@ -37,6 +37,7 @@
     <flying-saucer-pdf.version>9.4.1</flying-saucer-pdf.version>
     <poi.version>5.4.1</poi.version>
     <docx4j.version>8.3.15</docx4j.version>
+    <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
   </properties>
 
   <dependencies>
@@ -145,6 +146,13 @@
       <groupId>org.xhtmlrenderer</groupId>
       <artifactId>flying-saucer-pdf</artifactId>
       <version>${flying-saucer-pdf.version}</version>
+    </dependency>
+
+    <!-- html 转 PDF（CSS 支持更完整，基于 PDFBox） -->
+    <dependency>
+      <groupId>com.openhtmltopdf</groupId>
+      <artifactId>openhtmltopdf-pdfbox</artifactId>
+      <version>${openhtmltopdf.version}</version>
     </dependency>
 
     <dependency>

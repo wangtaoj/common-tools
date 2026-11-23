@@ -38,6 +38,8 @@ public interface DocumentCreator {
                 return WordDocumentCreator.getInstance();
             case PDF:
                 return PdfDocumentCreator.getInstance();
+            case OPENHTMLTOPDF:
+                return OpenHtmlToPdfDocumentCreator.getInstance();
             default:
                 throw new IllegalArgumentException("unsupported document type: " + documentType);
         }

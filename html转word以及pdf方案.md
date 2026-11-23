@@ -113,35 +113,69 @@ macOS 注意：系统**没有** `SimSun`/`SimHei` 等字体，对应物是 `Song
 
 ## html 转 pdf
 
+### 实现选择
+
+项目提供两种 html→PDF 实现，通过工厂方法切换：
+
+```java
+// flying-saucer 实现
+DocumentCreator.getInstance(DocumentType.PDF).create("模板", data, out);
+// openhtmltopdf 实现
+DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, out);
+```
+
+| | flying-saucer（`PdfDocumentCreator`） | openhtmltopdf（`OpenHtmlToPdfDocumentCreator`） |
+|---|---|---|
+| 后端 | openpdf（iText 2.x 分支） | PDFBox 2.0.x |
+| CSS 支持 | CSS 2.1 为主，表格/浮动较成熟 | 更完整（@page 边距盒、CSS 计数器等），布局更规范 |
+| 成熟度 | 老牌稳定，文档多 | 较新，bug 修复活跃 |
+| 水印/页码 | openpdf 页面事件绘制 | PDFBox 后处理绘制 |
+| 适用 | 存量模板以 CSS 2.1 为主 | 需要更好 CSS 兼容性的新模板 |
+
+两种实现的水印（平铺 + 旋转 + 半透明）与页码（底部居中"第 x 页 / 共 y 页"）效果一致，字体均内嵌。
+
 ### 依赖
 
-| 依赖 | 版本 | 说明 |
-|---|---|---|
-| `org.xhtmlrenderer:flying-saucer-pdf` | 9.4.1 | html 布局引擎 + PDF 输出（openpdf 后端） |
-| `com.github.librepdf:openpdf`（传递依赖） | 1.3.35 | openpdf（iText 2.x 分支） |
+| 实现 | 依赖 | 版本 | 说明 |
+|---|---|---|---|
+| flying-saucer | `org.xhtmlrenderer:flying-saucer-pdf` | 9.4.1 | html 布局引擎 + PDF 输出（openpdf 后端） |
+| flying-saucer | `com.github.librepdf:openpdf`（传递依赖） | 1.3.35 | openpdf（iText 2.x 分支） |
+| openhtmltopdf | `com.openhtmltopdf:openhtmltopdf-pdfbox` | 1.0.10 | html 布局 + PDF 输出（PDFBox 后端，传递引入 PDFBox 2.0.24） |
 
-**适配 JDK 版本**：9.4.x 支持 **JDK 8+**。注意 flying-saucer 9.5.0 起要求 JDK 11、9.13.0 起要求 JDK 17——升级版本时需同步评估 JDK。
+**适配 JDK 版本**：
 
-生成的 PDF 为标准 PDF 1.4+，任意阅读器可打开。
+- flying-saucer 9.4.x 支持 **JDK 8+**。注意 9.5.0 起要求 JDK 11、9.13.0 起要求 JDK 17——升级版本时需同步评估 JDK
+- openhtmltopdf 1.0.x 支持 **JDK 8+**（1.0.10 为最后一个支持 JDK 8 的正式版本，其内置 PDFBox 2.0.24 同样兼容 JDK 8）
+
+生成的 PDF 为标准格式，任意阅读器可打开。
 
 ### 字体
 
-- flying-saucer-pdf默认字体不支持中文，通过 `FontRegistrar` 自动注册 classpath `fonts/` 目录下的字体文件（`.ttf/.otf/.ttc`），jar 包部署与本地文件系统均兼容（openpdf 对相对路径自动回退 classpath 加载）
-- 注册后的字体以**内嵌(EMBEDDED + Identity-H)方式**写入 PDF，子集化只打包用到的字形——**任何设备上显示一致，无需阅读方安装字体**（与 docx 方案的本质区别）
-- **只支持 TTF（TrueType outlines）格式的字体文件内嵌**。OTF（CFF outlines）在 openpdf 1.3.35 的 Identity-H 子集嵌入路径上存在缺陷（实测文本层正确但字形渲染空白/错乱），推荐使用 TTF；TTC 集合字体可用 `字体名,索引` 语法引用
+- 两种实现默认字体均不含中文，均通过 `FontRegistrar` 自动注册 classpath `fonts/` 目录下的字体文件（`.ttf/.otf/.ttc`），jar 包部署与本地文件系统均兼容
+  - flying-saucer：`FontRegistrar.registerTo(ITextFontResolver)`，openpdf 对相对路径自动回退 classpath 加载
+  - openhtmltopdf：`FontRegistrar.getFontFiles()` + `getFontFamilyName()` 取字体族名，逐个 `builder.useFont(supplier, 族名)` 注册（supplier 从 classpath 读流，运行期自动关闭）
+- 注册后的字体以**内嵌 + 子集化**方式写入 PDF（flying-saucer 走 openpdf Identity-H；openhtmltopdf 走 PDFBox `PDType0Font` 子集嵌入）——**任何设备上显示一致，无需阅读方安装字体**（与 docx 方案的本质区别）
+- **flying-saucer 只支持 TTF（TrueType outlines）格式的字体文件内嵌**。OTF（CFF outlines）在 openpdf 1.3.35 的 Identity-H 子集嵌入路径上存在缺陷（实测文本层正确但字形渲染空白/错乱），推荐使用 TTF；TTC 集合字体可用 `字体名,索引` 语法引用。openhtmltopdf 同样推荐 TTF（PDFBox 的 `PDType0Font` 以 TrueType 为基础，CFF 字体支持有限）
 - 模板 CSS `font-family` 写**字体真实族名**（从字体文件内部 name 表读取，如 `"LXGW WenKai"`，而非文件名）
 - 水印与页码文字复用同一字体机制，中文正常显示
 
 ### 图片
 
 - 支持 base64 data URI 内嵌（推荐，单文件交付无外部依赖）、相对路径（相对 baseUrl）、http(s) URL
-- data URI 图片由 flying-saucer 解码后嵌入 PDF，尺寸跟随 html `width`/CSS 声明
+- data URI 图片由布局引擎解码后嵌入 PDF，尺寸跟随 html `width`/CSS 声明
 
 ### 其它转换能力与限制
 
-- flying-saucer 使用 **XML 解析器**（非容错 html parser）解析模板，**html 必须是合法 XHTML**：`<meta/>`、`<img/>`、`<br/>` 等必须自闭合，属性必须有引号，Thymeleaf HTML 模式的输出满足要求
+- 两种实现均使用 **XML 解析器**（非容错 html parser）解析模板，**html 必须是合法 XHTML**：`<meta/>`、`<img/>`、`<br/>` 等必须自闭合，属性必须有引号，Thymeleaf HTML 模式的输出满足要求；模板中的 Word HTML 元数据条件注释（前文"页面视图控制"）对两者均无害
 - 页面尺寸与边距由模板 CSS `@page { size: A4; margin: 40pt; }` 控制
-- 页码（"第 x 页 / 共 y 页"）：已实现，每页底部居中；总页数用 PdfTemplate 占位、文档关闭时回填（openpdf 经典手法）
-- 文字水印：已实现，平铺 + 旋转 + 透明度（`PdfGState`），绘制在正文内容层之上
+- 页码（"第 x 页 / 共 y 页"）：
+  - flying-saucer：已实现，每页底部居中；总页数用 PdfTemplate 占位、文档关闭时回填（openpdf 经典手法）
+  - openhtmltopdf：已实现，先由 openhtmltopdf 渲染出 PDF 字节，再用 PDFBox 逐页追加页码（总页数直接取 `getNumberOfPages()`，无需占位回填）
+- 文字水印：
+  - flying-saucer：openpdf 页面事件（`PdfPageEventHelper`）绘制，平铺 + 旋转 + 透明度（`PdfGState`）
+  - openhtmltopdf：PDFBox 后处理绘制（`PDPageContentStream` + `PDExtendedGraphicsState`），平铺 + 旋转 + 0.1 透明度，参数与 flying-saucer 实现一致
+  - 说明：openhtmltopdf 的 CSS 也支持固定定位元素做水印，但 1.0.10 对 `opacity` / `rgba()` 透明度实测不生效，实色水印会覆盖正文文字，故采用 PDFBox 后处理以保证半透明效果与正文可读性
+- openhtmltopdf 的水印/页码在渲染完成后由 PDFBox 统一绘制，模板本身保持干净，无需注入任何样式或标记
 - 与 docx 的对比优势：**所见即所得**（html 布局引擎真实排版）、字体内嵌跨设备一致、水印/页码内建支持
-- 局限：CSS 支持以 CSS 2.1 为主（flying-saucer 的强项），flex/grid 等现代布局同样不支持；JavaScript 不执行，动态内容需在模板渲染阶段生成
+- 局限：flex/grid 等现代布局支持有限（openhtmltopdf 略好于 flying-saucer，但仍非浏览器级）；JavaScript 均不执行，动态内容需在模板渲染阶段生成
+- openhtmltopdf 基于 Java2D 渲染文本/图片，与 flying-saucer 一样在桌面环境下会激活 AWT（macOS 上 Dock 会短暂显示 java 图标）；服务器/Linux 无图形环境时自动 headless，无影响

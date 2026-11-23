@@ -9,6 +9,8 @@ import org.xhtmlrenderer.pdf.ITextFontResolver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 字体注册器，注册 classpath fonts 目录下的字体文件到 flying-saucer 字体解析器
@@ -39,6 +41,11 @@ public final class FontRegistrar {
      */
     private static volatile List<String> FONT_FILES;
 
+    /**
+     * 字体族名缓存，key 为字体文件名
+     */
+    private static final Map<String, String> FONT_FAMILY_CACHE = new ConcurrentHashMap<>();
+
     private FontRegistrar() {
 
     }
@@ -66,8 +73,9 @@ public final class FontRegistrar {
 
     /**
      * 获取 fonts 目录下的字体文件名（首次调用时扫描目录并缓存）
+     * @return 字体文件名列表（如 LXGWWenKai-Regular.ttf）
      */
-    private static List<String> getFontFiles() {
+    public static List<String> getFontFiles() {
         if (FONT_FILES == null) {
             synchronized (FontRegistrar.class) {
                 if (FONT_FILES == null) {
@@ -76,6 +84,35 @@ public final class FontRegistrar {
             }
         }
         return FONT_FILES;
+    }
+
+    /**
+     * 获取字体族名（从字体内部 name 表读取，如 "LXGW WenKai"），
+     * 供 openhtmltopdf 等以 CSS 字体族名匹配的渲染器注册字体使用
+     * @param fileName 字体文件名（如 LXGWWenKai-Regular.ttf）
+     * @return 字体族名，优先取 Windows 平台英文名（platformId=3, languageId=1033）
+     */
+    public static String getFontFamilyName(String fileName) {
+        return FONT_FAMILY_CACHE.computeIfAbsent(fileName, key -> {
+            try {
+                BaseFont baseFont = BaseFont.createFont(FONT_DIR + key,
+                        BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                // 每个元素: {platformId, encodingId, languageId, name}
+                String[][] familyNames = baseFont.getFamilyFontName();
+                if (familyNames == null || familyNames.length == 0) {
+                    return key;
+                }
+                for (String[] name : familyNames) {
+                    // platformId=3 (Windows)，languageId=1033 (en-US)
+                    if ("3".equals(name[0]) && "1033".equals(name[2])) {
+                        return name[3];
+                    }
+                }
+                return familyNames[0][3];
+            } catch (Exception e) {
+                throw new ToolRuntimeException(e);
+            }
+        });
     }
 
     /**

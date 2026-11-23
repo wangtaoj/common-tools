@@ -50,6 +50,28 @@ public class DocumentCreatorTest {
     }
 
     @Test
+    public void testCreateOpenHtmlToPdf() throws Exception {
+        Map<String, Object> data = data();
+        Path path = OUTPUT_DIR.resolve("pdf-openhtml.pdf");
+        try (OutputStream out = new FileOutputStream(path.toFile())) {
+            DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("pdf-test", data, out);
+        }
+        verifyPdf(path);
+    }
+
+    @Test
+    public void testCreateOpenHtmlToPdfWithWatermark() throws Exception {
+        Map<String, Object> data = data();
+        Path path = OUTPUT_DIR.resolve("pdf-openhtml-watermark.pdf");
+        try (OutputStream out = new FileOutputStream(path.toFile())) {
+            DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF)
+                    .createWithWatermark("pdf-test", data, "机密文件", out);
+        }
+        verifyPdf(path);
+        log.info("openhtmltopdf 水印版 PDF 写入: {}", path.toAbsolutePath());
+    }
+
+    @Test
     public void testCreateWord() throws Exception {
         Map<String, Object> data = data();
         Path path = OUTPUT_DIR.resolve("word-test.docx");

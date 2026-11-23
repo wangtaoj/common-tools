@@ -10,5 +10,13 @@ public enum DocumentType {
 
     WORD,
 
-    PDF
+    /**
+     * 基于 flying-saucer 的 PDF
+     */
+    PDF,
+
+    /**
+     * 基于 openhtmltopdf 的 PDF
+     */
+    OPENHTMLTOPDF
 }
