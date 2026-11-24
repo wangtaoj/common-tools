@@ -4,14 +4,19 @@ import com.wangtao.tools.exception.ToolRuntimeException;
 import com.wangtao.tools.util.ThymeleafUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
+import org.docx4j.jaxb.Context;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
+import org.docx4j.wml.CTBorder;
 import org.docx4j.wml.SectPr;
 import org.docx4j.wml.Tbl;
+import org.docx4j.wml.TblBorders;
 import org.docx4j.wml.TblGrid;
 import org.docx4j.wml.TblGridCol;
 import org.docx4j.wml.TblWidth;
 import org.docx4j.wml.Tc;
+import org.docx4j.wml.TcPrInner.TcBorders;
+import org.docx4j.wml.TcPr;
 import org.docx4j.wml.Tr;
 
 import javax.xml.bind.JAXBElement;
@@ -20,6 +25,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * 基于 docx4j 的 Word 文档创建器：html 转 docx（Open XML），生成真正的 Word 文档
@@ -73,8 +79,8 @@ public class WordDocumentCreator implements DocumentCreator {
             wordMLPackage.getMainDocumentPart().getContent()
                     .addAll(importer.convert(html, null));
 
-            // 修正固定布局表格的列宽（docx4j 按自身布局宽度计算，可能超出 Word 页面内容宽）
-            normalizeFixedTableWidths(wordMLPackage);
+            // 修正表格：统一单元格边框到表级（兼容 WPS 渲染）、修正固定布局表格列宽
+            normalizeTables(wordMLPackage);
 
             // 序列化输出；write 只写不关闭，out 的关闭由调用方负责
             wordMLPackage.save(out);
@@ -84,12 +90,16 @@ public class WordDocumentCreator implements DocumentCreator {
     }
 
     /**
-     * 修正固定布局（table-layout: fixed）表格的列宽：
-     * docx4j 按自身布局宽度计算列宽，生成的 tblGrid 可能超出 Word 页面内容宽，
-     * 而 Word 对固定布局表格严格按 tblGrid 渲染，导致表格溢出页面不可见。
-     * <p>此处将超出内容宽的固定布局表格按比例缩放到页面内容宽（保留列宽比例）
+     * 规范化表格结构：
+     * <ol>
+     *   <li>单元格边框统一时上移到表级 tblBorders——docx4j 给每个单元格都写 tcBorders，
+     *       相邻单元格边框重叠，Word 会合并渲染而 WPS 会各自绘制，边框较粗时出现单元格间隙</li>
+     *   <li>修正固定布局（table-layout: fixed）表格列宽——docx4j 按自身布局宽度计算列宽，
+     *       tblGrid 可能超出 Word 页面内容宽，固定布局表格会溢出页面不可见；
+     *       超出时按比例缩放到内容宽（保留列宽比例）</li>
+     * </ol>
      */
-    private void normalizeFixedTableWidths(WordprocessingMLPackage wordMLPackage) {
+    private void normalizeTables(WordprocessingMLPackage wordMLPackage) {
         SectPr sectPr = wordMLPackage.getMainDocumentPart().getJaxbElement().getBody().getSectPr();
         int contentWidth = getContentWidth(sectPr);
         if (contentWidth <= 0) {
@@ -180,6 +190,8 @@ public class WordDocumentCreator implements DocumentCreator {
                 }
             }
         }
+        // 单元格边框统一时上移到表级，避免 WPS 相邻单元格边框重复绘制产生间隙
+        normalizeCellBorders(tbl);
         // 仅处理固定布局表格（自动布局由 Word 自行适配，无需处理）
         if (tbl.getTblPr() == null || tbl.getTblPr().getTblLayout() == null
                 || !"fixed".equals(tbl.getTblPr().getTblLayout().getType().value())) {
@@ -244,6 +256,106 @@ public class WordDocumentCreator implements DocumentCreator {
             return cell.getTcPr().getGridSpan().getVal().intValue();
         }
         return 1;
+    }
+
+    /**
+     * 单元格边框上移到表级 tblBorders：
+     * docx4j 为每个单元格写四边 tcBorders，相邻单元格边框位置重叠，
+     * Word 按边框冲突规则合并为一条线，WPS 各自绘制，边框变粗后会出现单元格间隙。
+     * <p>取出现次数最多的边框组合作为表级边框（外框 + 内部横竖线），
+     * 仅移除与该组合一致的单元格边框，个别自定义边框的单元格保留自身 tcBorders 覆盖表级设置
+     */
+    private void normalizeCellBorders(Tbl tbl) {
+        if (tbl.getTblPr() == null) {
+            return;
+        }
+        List<Tr> rows = getRows(tbl);
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        Map<String, TcBorders> borderGroups = new LinkedHashMap<>();
+        for (Tr row : rows) {
+            for (Tc cell : getCells(row)) {
+                TcPr tcPr = cell.getTcPr();
+                TcBorders borders = tcPr == null ? null : tcPr.getTcBorders();
+                if (borders == null || borders.getTop() == null || borders.getLeft() == null
+                        || borders.getBottom() == null || borders.getRight() == null) {
+                    continue;
+                }
+                String key = borderKey(borders);
+                counts.merge(key, 1, Integer::sum);
+                borderGroups.putIfAbsent(key, borders);
+            }
+        }
+        String majorityKey = null;
+        int majorityCount = 0;
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            if (entry.getValue() > majorityCount) {
+                majorityKey = entry.getKey();
+                majorityCount = entry.getValue();
+            }
+        }
+        // 至少两个单元格共享同一边框组合才值得上移
+        if (majorityKey == null || majorityCount < 2) {
+            return;
+        }
+        TcBorders reference = borderGroups.get(majorityKey);
+        // 表级边框：外框取单元格四边，内部横线取上/下边框、内部竖线取左/右边框
+        TblBorders tblBorders = Context.getWmlObjectFactory().createTblBorders();
+        tblBorders.setTop(copyBorder(reference.getTop()));
+        tblBorders.setLeft(copyBorder(reference.getLeft()));
+        tblBorders.setBottom(copyBorder(reference.getBottom()));
+        tblBorders.setRight(copyBorder(reference.getRight()));
+        tblBorders.setInsideH(copyBorder(reference.getBottom()));
+        tblBorders.setInsideV(copyBorder(reference.getRight()));
+        tbl.getTblPr().setTblBorders(tblBorders);
+        // 仅移除与多数组合一致的单元格边框，其它单元格保留自身设置覆盖表级边框
+        for (Tr row : rows) {
+            for (Tc cell : getCells(row)) {
+                TcPr tcPr = cell.getTcPr();
+                if (tcPr == null || tcPr.getTcBorders() == null) {
+                    continue;
+                }
+                if (majorityKey.equals(borderKey(tcPr.getTcBorders()))) {
+                    tcPr.setTcBorders(null);
+                }
+            }
+        }
+        // 零单元格间距显式移除，避免部分阅读器（WPS）将其解析为间隙
+        if (tbl.getTblPr().getTblCellSpacing() != null
+                && tbl.getTblPr().getTblCellSpacing().getW() != null
+                && tbl.getTblPr().getTblCellSpacing().getW().intValue() == 0) {
+            tbl.getTblPr().setTblCellSpacing(null);
+        }
+        log.debug("表格单元格边框已上移到表级 tblBorders（{}/{} 单元格）", majorityCount, counts.values().stream().mapToInt(Integer::intValue).sum());
+    }
+
+    /**
+     * 边框组合的标识 key（四边样式、颜色、粗细）
+     */
+    private String borderKey(TcBorders borders) {
+        return borderKey(borders.getTop()) + "|" + borderKey(borders.getLeft()) + "|"
+                + borderKey(borders.getBottom()) + "|" + borderKey(borders.getRight());
+    }
+
+    /**
+     * 单条边框的标识 key
+     */
+    private String borderKey(CTBorder border) {
+        if (border == null) {
+            return "null";
+        }
+        return border.getVal() + ":" + border.getColor() + ":" + border.getSz();
+    }
+
+    /**
+     * 复制边框设置
+     */
+    private CTBorder copyBorder(CTBorder source) {
+        CTBorder border = Context.getWmlObjectFactory().createCTBorder();
+        border.setVal(source.getVal());
+        border.setColor(source.getColor());
+        border.setSz(source.getSz());
+        border.setSpace(source.getSpace());
+        return border;
     }
 
     /**

@@ -109,6 +109,7 @@ macOS 注意：系统**没有** `SimSun`/`SimHei` 等字体，对应物是 `Song
 - 水印：Word 无原生水印 API，惯用做法是页眉内嵌艺术字（VML），实现繁琐，当前实现忽略水印参数
 - 模板必须是**合法的 XHTML**（标签闭合、属性引号），Thymeleaf HTML 模式输出满足此要求
 - 表格布局：`table-layout: auto`（默认）由 Word 自动适配页面宽度；`table-layout: fixed` 时 docx4j 按自身布局宽度计算列宽，生成的 `tblGrid` 可能超出 Word 页面内容宽（Word 对固定布局表格严格按列宽渲染，表格会溢出页面不可见）。`WordDocumentCreator` 已做修正：转换后将**超出内容宽的固定布局表格按比例缩放到页面内容宽**（保留列宽比例），自动布局表格不做改动
+- 表格边框：docx4j 给每个单元格都写四边 `tcBorders`，相邻单元格边框位置重叠——Word 按边框冲突规则合并为一条线，WPS 则分别绘制，边框变粗后会出现单元格间隙。`WordDocumentCreator` 已做修正：**将出现次数最多的单元格边框组合上移到表级 `tblBorders`**（外框 + 内部横竖线），并移除与之一致的单元格边框；个别自定义边框的单元格保留自身 `tcBorders` 覆盖表级设置，同时移除零值的 `tblCellSpacing`
 
 ---
 
