@@ -269,6 +269,12 @@ public class WordDocumentCreator implements DocumentCreator {
         if (tbl.getTblPr() == null) {
             return;
         }
+        // border-collapse: separate 时单元格间有间距（tblCellSpacing > 0），保持单元格边框不动
+        if (tbl.getTblPr().getTblCellSpacing() != null
+                && tbl.getTblPr().getTblCellSpacing().getW() != null
+                && tbl.getTblPr().getTblCellSpacing().getW().intValue() > 0) {
+            return;
+        }
         List<Tr> rows = getRows(tbl);
         Map<String, Integer> counts = new LinkedHashMap<>();
         Map<String, TcBorders> borderGroups = new LinkedHashMap<>();
