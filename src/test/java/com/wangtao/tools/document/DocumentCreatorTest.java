@@ -82,6 +82,40 @@ public class DocumentCreatorTest {
     }
 
     @Test
+    public void testCreateWordFixedTable() throws Exception {
+        Map<String, Object> data = data();
+        Path path = OUTPUT_DIR.resolve("word-fixed-table.docx");
+        try (OutputStream out = new FileOutputStream(path.toFile())) {
+            DocumentCreator.getInstance(DocumentType.WORD).create("word-fixed-table", data, out);
+        }
+        // 固定布局表格的列宽合计不应超过页面内容宽（A4 11907 - 左右边距 1440*2 = 9027 twips），
+        // 超出时 Word 会把表格渲染到页面外
+        org.docx4j.openpackaging.packages.WordprocessingMLPackage pkg =
+                org.docx4j.openpackaging.packages.WordprocessingMLPackage.load(path.toFile());
+        org.docx4j.wml.Tbl tbl = findFirstTable(pkg);
+        Assertions.assertNotNull(tbl, "未找到表格");
+        int gridTotal = 0;
+        for (org.docx4j.wml.TblGridCol col : tbl.getTblGrid().getGridCol()) {
+            gridTotal += col.getW().intValue();
+        }
+        Assertions.assertTrue(gridTotal <= 9027, "固定布局表格宽度超出页面内容宽: " + gridTotal);
+    }
+
+    /**
+     * 取文档中第一个表格
+     */
+    private org.docx4j.wml.Tbl findFirstTable(org.docx4j.openpackaging.packages.WordprocessingMLPackage pkg) {
+        for (Object content : pkg.getMainDocumentPart().getContent()) {
+            Object value = content instanceof javax.xml.bind.JAXBElement
+                    ? ((javax.xml.bind.JAXBElement<?>) content).getValue() : content;
+            if (value instanceof org.docx4j.wml.Tbl) {
+                return (org.docx4j.wml.Tbl) value;
+            }
+        }
+        return null;
+    }
+
+    @Test
     public void testCreateFakeWord() throws Exception {
         Map<String, Object> data = data();
         Path path = OUTPUT_DIR.resolve("fakeWord-test.doc");

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <title>word-fixed-table</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 40pt;
+        }
+        body {
+            font-family: "LXGW WenKai", serif;
+        }
+        .fixed-table {
+            /* 固定布局：docx4j 转换后需要修正列宽，避免表格溢出页面 */
+            table-layout: fixed;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .fixed-table th, .fixed-table td {
+            border: 1px solid #999;
+            padding: 6pt 8pt;
+            font-size: 10pt;
+        }
+        .fixed-table th {
+            background-color: #eef2f7;
+            font-weight: normal;
+            width: 15%;
+        }
+    </style>
+</head>
+<body>
+<h1>固定布局表格测试</h1>
+<table class="fixed-table">
+    <tr>
+        <th>客户姓名</th>
+        <td th:text="${customerName}">-</td>
+        <th>客户编号</th>
+        <td th:text="${customerNo}">-</td>
+    </tr>
+    <tr>
+        <th>证件类型</th>
+        <td th:text="${certType}">-</td>
+        <th>证件号码</th>
+        <td th:text="${certNo}">-</td>
+    </tr>
+    <tr>
+        <th>详情地址</th>
+        <td colspan="3" th:text="${addrInfo}">-</td>
+    </tr>
+</table>
+</body>
+</html>
