@@ -69,29 +69,8 @@ html "变成 Word 文档"有三种技术路线，本质完全不同，按兼容�
 ### 字体
 
 - docx **不内嵌字体**。模板 CSS `font-family` 中指定的字体名会写入 docx 的字体引用，**打开文档的机器必须安装该字体**，否则 Word 自动用后备字体替换显示（内容不丢、字形不同）
-- 与 PDF 方案的本质区别：PDF 由 flying-saucer 在生成时内嵌字形，跨设备显示一致；docx 的显示效果依赖阅读方环境
 - 如需内嵌字体进 docx（`fontTable.xml` + `odttf` 混淆字体），docx4j 支持但配置繁琐，且部分字体许可证禁止内嵌，一般不建议
-
-#### Windows 常用字体族名对照
-
-同一字体在字体文件内部同时注册英文族名与中文族名（name 表 ID 1），CSS `font-family` 两者都能命中，推荐写英文族名（不依赖文档编码环境）：
-
-| 中文习惯叫法 | 英文族名（推荐） | 中文族名 | 字体文件 | 备注 |
-|---|---|---|---|---|
-| 宋体 | `SimSun` | 宋体 | `simsun.ttc` | Win 系统内置，最常用的正文字体 |
-| 新宋体 | `NSimSun` | 新宋体 | `simsun.ttc` | 宋体的等宽变体，同文件内 |
-| 仿宋 | `FangSong` | 仿宋 | `simfang.ttf` | 公文正文常用 |
-| 楷体 | `KaiTi` | 楷体 | `simkai.ttf` | 公文标题/引文常用 |
-| 黑体 | `SimHei` | 黑体 | `simhei.ttf` | Win 内置，标题常用 |
-| 微软雅黑 | `Microsoft YaHei` | 微软雅黑 | `msyh.ttc` | Vista 起内置，现代 UI 风格 |
-| 隶书 | `LiSu` | 隶书 | `SIMLI.TTF` | Office 安装附带 |
-| 幼圆 | `YouYuan` | 幼圆 | `SIMYOU.TTF` | Office 安装附带 |
-| 华文宋体 | `STSong` | 华文宋体 | Office 安装附带 | macOS 也有（`Songti.ttc` 内含） |
-| 华文楷体 | `STKaiti` | 华文楷体 | Office 安装附带 | |
-| 华文黑体 | `STHeiti` | 华文黑体 | Office 安装附带 | macOS 也有 |
-| 等线 | `DengXian` | 等线 | `Deng.ttc` | Office 2016 起的默认正文字体 |
-
-macOS 注意：系统**没有** `SimSun`/`SimHei` 等字体，对应物是 `Songti SC`（宋体-简，`Songti.ttc` 内含多个变体）、`Heiti SC`、`PingFang SC`（苹方）。跨平台文档引用 `SimSun` 时 macOS 会自动替换显示，内容不丢但字形有差异；要求跨平台一致请走 PDF 方案（字体内嵌）。
+- 字体族名、字体格式、常用字体清单见文末「字体」章节
 
 ### 图片
 
@@ -132,6 +111,7 @@ DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, o
 | CSS 支持 | CSS 2.1 为主，表格/浮动较成熟 | 更完整（@page 边距盒、CSS 计数器等），布局更规范 |
 | 成熟度 | 老牌稳定，文档多 | 较新，bug 修复活跃 |
 | 水印/页码 | openpdf 页面事件绘制 | PDFBox 后处理绘制 |
+| 字体格式支持 | TTF（推荐）、TTC（多字面展开）；OTF 内嵌有缺陷 | **仅 TTF**（OTF/TTC 实际不可用，详见「字体」章节） |
 | 适用 | 存量模板以 CSS 2.1 为主 | 需要更好 CSS 兼容性的新模板 |
 
 两种实现的水印（平铺 + 旋转 + 半透明）与页码（底部居中"第 x 页 / 共 y 页"）效果一致，字体均内嵌。
@@ -153,12 +133,12 @@ DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, o
 
 ### 字体
 
-- 两种实现默认字体均不含中文，均通过 `FontRegistrar` 自动注册 classpath `fonts/` 目录下的字体文件（`.ttf/.otf/.ttc`），jar 包部署与本地文件系统均兼容
+- 两种实现默认字体均不含中文，均通过 `FontRegistrar` 自动注册 classpath `fonts/` 目录下的字体文件，jar 包部署与本地文件系统均兼容
   - flying-saucer：`FontRegistrar.registerTo(ITextFontResolver)`，openpdf 对相对路径自动回退 classpath 加载
   - openhtmltopdf：`FontRegistrar.getFontFiles()` + `getFontFamilyName()` 取字体族名，逐个 `builder.useFont(supplier, 族名)` 注册（supplier 从 classpath 读流，运行期自动关闭）
 - 注册后的字体以**内嵌 + 子集化**方式写入 PDF（flying-saucer 走 openpdf Identity-H；openhtmltopdf 走 PDFBox `PDType0Font` 子集嵌入）——**任何设备上显示一致，无需阅读方安装字体**（与 docx 方案的本质区别）
-- **flying-saucer 只支持 TTF（TrueType outlines）格式的字体文件内嵌**。OTF（CFF outlines）在 openpdf 1.3.35 的 Identity-H 子集嵌入路径上存在缺陷（实测文本层正确但字形渲染空白/错乱），推荐使用 TTF；TTC 集合字体可用 `字体名,索引` 语法引用。openhtmltopdf 同样推荐 TTF（PDFBox 的 `PDType0Font` 以 TrueType 为基础，CFF 字体支持有限）
 - 模板 CSS `font-family` 写**字体真实族名**（从字体文件内部 name 表读取，如 `"LXGW WenKai"`，而非文件名）
+- **字体格式存在重要差异：两种实现均只推荐 TTF**，OTF/TTC 的支持情况各不相同，详见文末「字体」章节
 - 水印与页码文字复用同一字体机制，中文正常显示
 
 ### 图片
@@ -181,3 +161,64 @@ DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, o
 - 与 docx 的对比优势：**所见即所得**（html 布局引擎真实排版）、字体内嵌跨设备一致、水印/页码内建支持
 - 局限：flex/grid 等现代布局支持有限（openhtmltopdf 略好于 flying-saucer，但仍非浏览器级）；JavaScript 均不执行，动态内容需在模板渲染阶段生成
 - openhtmltopdf 基于 Java2D 渲染文本/图片，与 flying-saucer 一样在桌面环境下会激活 AWT（macOS 上 Dock 会短暂显示 java 图标）；服务器/Linux 无图形环境时自动 headless，无影响
+
+## 字体
+
+### 字体族名约定
+
+- 模板 CSS `font-family` 写**字体真实族名**（字体文件 name 表 ID 1 的值，如 `"LXGW WenKai"`），不是文件名
+- 同一字体常同时注册英文族名与中文族名（如 `SimSun` / `宋体`），两者都能命中；**推荐写英文族名**，不依赖文档编码环境
+- docx4j（word）与 flying-saucer / openhtmltopdf（pdf）都是按族名匹配的
+
+### 各方案的字体处理方式
+
+| 方案 | 是否内嵌字体 | 说明 |
+|---|---|---|
+| html→docx（docx4j） | 不内嵌 | 仅写入字体名引用，打开文档的机器需安装对应字体，否则后备字体替换（内容不丢、字形不同） |
+| html→pdf（flying-saucer / openhtmltopdf） | 内嵌 + 子集化 | 只打包用到的字形，任何设备显示一致 |
+
+### 字体格式支持（实测）
+
+| 格式 | flying-saucer（openpdf） | openhtmltopdf（PDFBox） |
+|---|---|---|
+| **TTF**（TrueType outlines） | ✅ 推荐，子集内嵌正常 | ✅ 推荐，子集内嵌正常 |
+| **OTF**（CFF outlines） | ⚠️ 有缺陷：openpdf 1.3.35 子集嵌入后文本层正确但字形渲染空白/错乱 | ❌ 不支持：注册不报错但**静默回退**默认字体（中文显示为方块）；File API 注册甚至抛 NPE |
+| **TTC**（字体集合） | ✅ 支持：内部通过 `enumerateTTCNames` 展开各字面；受字体嵌入许可限制（`fsType=2` 时报 "cannot be embedded due to licensing restrictions"） | ⚠️ 仅 `useFont(File, family)` 可用（内部走 `TrueTypeCollection`）；本库经 classpath `InputStream` 注册，**TTC 会静默回退**，即对本库实际不可用 |
+
+**结论：需要内嵌中文时统一使用 TTF。** 下载的开源字体如果只有 OTF/TTC，先用工具（如 fontTools / FontForge）转换为 TTF。
+
+### Windows 常用字体族名对照
+
+| 中文习惯叫法 | 英文族名（推荐） | 中文族名 | 字体文件 | 备注 |
+|---|---|---|---|---|
+| 宋体 | `SimSun` | 宋体 | `simsun.ttc` | Win 系统内置，最常用的正文字体 |
+| 新宋体 | `NSimSun` | 新宋体 | `simsun.ttc` | 宋体的等宽变体，同文件内 |
+| 仿宋 | `FangSong` | 仿宋 | `simfang.ttf` | 公文正文常用 |
+| 楷体 | `KaiTi` | 楷体 | `simkai.ttf` | 公文标题/引文常用 |
+| 黑体 | `SimHei` | 黑体 | `simhei.ttf` | Win 内置，标题常用 |
+| 微软雅黑 | `Microsoft YaHei` | 微软雅黑 | `msyh.ttc` | Vista 起内置，现代 UI 风格 |
+| 等线 | `DengXian` | 等线 | `Deng.ttc` | Office 2016 起的默认正文字体 |
+| 隶书 | `LiSu` | 隶书 | `SIMLI.TTF` | Office 安装附带 |
+| 幼圆 | `YouYuan` | 幼圆 | `SIMYOU.TTF` | Office 安装附带 |
+| 华文宋体 | `STSong` | 华文宋体 | Office 安装附带 | macOS 也有（`Songti.ttc` 内含） |
+| 华文楷体 | `STKaiti` | 华文楷体 | Office 安装附带 | |
+| 华文黑体 | `STHeiti` | 华文黑体 | Office 安装附带 | macOS 也有 |
+
+macOS 注意：系统**没有** `SimSun`/`SimHei` 等字体，对应物是 `Songti SC`（宋体-简）、`Heiti SC`、`PingFang SC`（苹方）。跨平台文档引用 `SimSun` 时 macOS 会自动替换显示，内容不丢但字形有差异；要求跨平台一致请走 PDF 方案（字体内嵌）。
+
+### 流行开源中文字体（可免费商用 / 开源许可）
+
+| 字体 | 风格 | 格式 | 许可 | 说明 |
+|---|---|---|---|---|
+| **霞鹜文楷**（LXGW WenKai） | 楷体 | TTF | SIL OFL 1.1 | 本项目 `fonts/` 默认字体，族名 `LXGW WenKai`；同系列有 Light / Bold 等字重 |
+| **思源宋体**（Source Han Serif SC / Noto Serif CJK SC） | 宋体 | OTF / TTC / TTF（可变字体） | SIL OFL 1.1 | Adobe + Google 合作出品，七种字重，字符覆盖完整；**注意官方发布多为 OTF**，PDF 内嵌需转换 TTF |
+| **思源黑体**（Source Han Sans SC / Noto Sans CJK SC） | 黑体 | OTF / TTC / TTF | SIL OFL 1.1 | 同上，现代无衬线风格 |
+| **文泉驿微米黑**（WenQuanYi Micro Hei） | 黑体 | TTC / TTF | Apache 2.0（另有 GPLv3 + 字体嵌入例外） | 体积小（约 5MB），适合嵌入式场景；实测 TTC 在 flying-saucer 下可正常内嵌 |
+| **得意黑**（Smiley Sans） | 标题黑体 | TTF | SIL OFL 1.1 | 倾斜紧凑风格，适合报告标题，不适合长正文 |
+| **阿里巴巴普惠体**（Alibaba PuHuiTi） | 黑体 | TTF / OTF | 阿里巴巴免费商用授权（非开源） | 商用免费但需遵守授权条款，分为多个字重 |
+
+实践建议：
+
+- 生成 PDF（需内嵌）：优先选 **TTF 格式**的开源字体；本项目已内置霞鹜文楷，开箱即用
+- 生成 docx（不内嵌）：选 Windows 自带字体（`SimSun`、`Microsoft YaHei` 等）兼容性最好；若使用开源字体，需在目标机器安装
+- 避免使用商业字体（方正、汉仪等）的文件再分发，注意授权范围
