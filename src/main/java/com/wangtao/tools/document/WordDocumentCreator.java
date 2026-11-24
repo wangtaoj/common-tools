@@ -201,6 +201,7 @@ public class WordDocumentCreator implements DocumentCreator {
         double ratio = (double) contentWidth / totalWidth;
         // 逐列按比例缩放（向下取整），余量补到最后一列，避免四舍五入后再次超出内容宽
         List<TblGridCol> gridCols = grid.getGridCol();
+        int[] colWidths = new int[gridCols.size()];
         int scaledTotal = 0;
         for (int i = 0; i < gridCols.size(); i++) {
             TblGridCol gridCol = gridCols.get(i);
@@ -212,26 +213,47 @@ public class WordDocumentCreator implements DocumentCreator {
                     : (int) Math.floor(gridCol.getW().longValue() * ratio);
             scaled = Math.max(1, scaled);
             gridCol.setW(BigInteger.valueOf(scaled));
+            colWidths[i] = scaled;
             scaledTotal += scaled;
         }
+        // 单元格宽度直接取缩放后的网格列宽：colspan 即连续多列之和，
+        // 不再按比例二次换算，保证 tcW 与 tblGrid 完全一致
         for (Tr row : rows) {
+            int colIndex = 0;
             for (Tc cell : getCells(row)) {
-                if (cell.getTcPr() != null && cell.getTcPr().getTcW() != null
-                        && TblWidth.TYPE_DXA.equals(cell.getTcPr().getTcW().getType())) {
+                int span = getGridSpan(cell);
+                if (cell.getTcPr() != null && cell.getTcPr().getTcW() != null) {
+                    // colspan 单元格宽度为所跨列宽之和；统一为 dxa（docx4j 对 colspan 单元格写的是 auto）
+                    int cellWidth = sumColumnWidths(colWidths, colIndex, span);
                     TblWidth tcW = cell.getTcPr().getTcW();
-                    if (tcW.getW() != null) {
-                        tcW.setW(BigInteger.valueOf(scale(tcW.getW(), ratio)));
-                    }
+                    tcW.setType(TblWidth.TYPE_DXA);
+                    tcW.setW(BigInteger.valueOf(Math.max(1, cellWidth)));
                 }
+                colIndex += span;
             }
         }
         log.debug("固定布局表格宽度 {} 超出页面内容宽 {}，已按比例缩放", totalWidth, contentWidth);
     }
 
     /**
-     * 按比例缩放 twips 值，最小为 1
+     * 单元格跨列数（colspan），默认 1
      */
-    private long scale(BigInteger value, double ratio) {
-        return Math.max(1L, Math.round(value.longValue() * ratio));
+    private int getGridSpan(Tc cell) {
+        if (cell.getTcPr() != null && cell.getTcPr().getGridSpan() != null
+                && cell.getTcPr().getGridSpan().getVal() != null) {
+            return cell.getTcPr().getGridSpan().getVal().intValue();
+        }
+        return 1;
+    }
+
+    /**
+     * 从起始列开始累加 span 列的宽度
+     */
+    private int sumColumnWidths(int[] colWidths, int start, int span) {
+        int sum = 0;
+        for (int i = start; i < Math.min(start + span, colWidths.length); i++) {
+            sum += colWidths[i];
+        }
+        return sum;
     }
 }
