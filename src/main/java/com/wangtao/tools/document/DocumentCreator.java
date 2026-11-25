@@ -59,6 +59,8 @@ public interface DocumentCreator {
                 return HtmlDocumentCreator.getInstance();
             case WORD:
                 return WordDocumentCreator.getInstance();
+            case FAKE_WORD:
+                return FakeWordDocumentCreator.getInstance();
             case PDF:
                 return PdfDocumentCreator.getInstance();
             case OPENHTMLTOPDF:

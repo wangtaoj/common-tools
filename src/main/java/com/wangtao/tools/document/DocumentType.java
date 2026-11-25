@@ -10,6 +10,8 @@ public enum DocumentType {
 
     WORD,
 
+    FAKE_WORD,
+
     /**
      * 基于 flying-saucer 的 PDF
      */

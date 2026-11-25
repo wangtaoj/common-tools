@@ -43,7 +43,7 @@ public class FakeWordDocumentCreator extends AbstractDocumentCreator {
      */
     @Override
     protected DocumentType documentType() {
-        return DocumentType.WORD;
+        return DocumentType.FAKE_WORD;
     }
 
     /**
