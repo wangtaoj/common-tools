@@ -1,7 +1,6 @@
 package com.wangtao.tools.document;
 
 import com.wangtao.tools.exception.ToolRuntimeException;
-import com.wangtao.tools.util.ThymeleafUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.jaxb.Context;
@@ -31,7 +30,7 @@ import java.util.Map;
 
 /**
  * 基于 docx4j 的 Word 文档创建器：html 转 docx（Open XML），生成真正的 Word 文档
- * <p>html 由 {@link ThymeleafUtils} 渲染，再经 docx4j 的 XHTML importer 转换，
+ * <p>html 由 {@link AbstractDocumentCreator} 渲染，再经 docx4j 的 XHTML importer 转换，
  * 支持 h1-h6、段落、表格（含样式）、图片（含 base64 data URI）、列表等
  * <p>在模板 CSS font-family 中指定后，docx 内会引用对应字体名称（需目标机器安装该字体，docx4j 不内嵌字体）
  *
@@ -39,7 +38,7 @@ import java.util.Map;
  * Created at 2026-11-21
  */
 @Slf4j
-public class WordDocumentCreator implements DocumentCreator {
+public class WordDocumentCreator extends AbstractDocumentCreator {
 
     /**
      * 常用中文字体（Windows / macOS
@@ -85,13 +84,21 @@ public class WordDocumentCreator implements DocumentCreator {
     }
 
     /**
+     * @return 当前创建器对应的文档类型
+     */
+    @Override
+    protected DocumentType documentType() {
+        return DocumentType.WORD;
+    }
+
+    /**
      * 会忽略水印
      * <p>
      * {@inheritDoc}
      */
     @Override
     public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
-        String html = ThymeleafUtils.eval(templatePath, data);
+        String html = eval(templatePath, data);
         try {
             // 空白 docx 包，列表编号支持需挂载默认 numbering 定义
             WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.createPackage();

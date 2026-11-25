@@ -1,7 +1,6 @@
 package com.wangtao.tools.document;
 
 import com.wangtao.tools.exception.ToolRuntimeException;
-import com.wangtao.tools.util.ThymeleafUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,7 +13,7 @@ import java.util.Map;
  * @author wangtao
  * Created at 2026-11-21
  */
-public class HtmlDocumentCreator implements DocumentCreator {
+public class HtmlDocumentCreator extends AbstractDocumentCreator {
 
     private final static HtmlDocumentCreator INSTANCE = new HtmlDocumentCreator();
 
@@ -27,6 +26,15 @@ public class HtmlDocumentCreator implements DocumentCreator {
     public static HtmlDocumentCreator getInstance() {
         return INSTANCE;
     }
+
+    /**
+     * @return 当前创建器对应的文档类型
+     */
+    @Override
+    protected DocumentType documentType() {
+        return DocumentType.HTML;
+    }
+
     /**
      * 会忽略水印与 baseUri
      * <p>
@@ -38,7 +46,7 @@ public class HtmlDocumentCreator implements DocumentCreator {
         // Writer 只 flush 不 close，out 的关闭由调用方负责
         Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
         try {
-            ThymeleafUtils.eval(templatePath, data, writer);
+            eval(templatePath, data, writer);
             writer.flush();
         } catch (IOException e) {
             throw new ToolRuntimeException(e);

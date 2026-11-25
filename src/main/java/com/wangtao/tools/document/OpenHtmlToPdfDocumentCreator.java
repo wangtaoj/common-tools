@@ -3,7 +3,6 @@ package com.wangtao.tools.document;
 import com.openhtmltopdf.extend.FSSupplier;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.wangtao.tools.exception.ToolRuntimeException;
-import com.wangtao.tools.util.ThymeleafUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -28,7 +27,7 @@ import java.util.Map;
  * @author wangtao
  * Created at 2026-11-23
  */
-public class OpenHtmlToPdfDocumentCreator implements DocumentCreator {
+public class OpenHtmlToPdfDocumentCreator extends AbstractDocumentCreator {
 
     /**
      * 水印/页码字体文件（fonts 目录内）
@@ -83,9 +82,17 @@ public class OpenHtmlToPdfDocumentCreator implements DocumentCreator {
         return INSTANCE;
     }
 
+    /**
+     * @return 当前创建器对应的文档类型
+     */
+    @Override
+    protected DocumentType documentType() {
+        return DocumentType.OPENHTMLTOPDF;
+    }
+
     @Override
     public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
-        String html = ThymeleafUtils.eval(templatePath, data);
+        String html = eval(templatePath, data);
         ByteArrayOutputStream rendered = new ByteArrayOutputStream();
         try {
             PdfRendererBuilder builder = new PdfRendererBuilder();

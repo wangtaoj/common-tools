@@ -1,7 +1,6 @@
 package com.wangtao.tools.document;
 
 import com.wangtao.tools.exception.ToolRuntimeException;
-import com.wangtao.tools.util.ThymeleafUtils;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
 import java.io.ByteArrayInputStream;
@@ -22,7 +21,7 @@ import java.util.Map;
  * @author wangtao
  * Created at 2026-11-21
  */
-public class FakeWordDocumentCreator implements DocumentCreator {
+public class FakeWordDocumentCreator extends AbstractDocumentCreator {
 
     private static final FakeWordDocumentCreator INSTANCE = new FakeWordDocumentCreator();
 
@@ -38,13 +37,23 @@ public class FakeWordDocumentCreator implements DocumentCreator {
     }
 
     /**
+     * html 伪装 word 同样由 Word 打开，字体不内嵌，按 WORD 处理
+     *
+     * @return 当前创建器对应的文档类型
+     */
+    @Override
+    protected DocumentType documentType() {
+        return DocumentType.WORD;
+    }
+
+    /**
      * 会忽略水印与 baseUri（html 原样封装进 OLE2 容器，相对资源由 Word 打开时解析）
      * <p>
      * {@inheritDoc}
      */
     @Override
     public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
-        String html = ThymeleafUtils.eval(templatePath, data);
+        String html = eval(templatePath, data);
         byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
         try (InputStream is = new ByteArrayInputStream(bytes);
              POIFSFileSystem fs = new POIFSFileSystem()) {

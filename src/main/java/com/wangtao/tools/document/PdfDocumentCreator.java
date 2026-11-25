@@ -10,7 +10,6 @@ import com.lowagie.text.pdf.PdfPageEventHelper;
 import com.lowagie.text.pdf.PdfTemplate;
 import com.lowagie.text.pdf.PdfWriter;
 import com.wangtao.tools.exception.ToolRuntimeException;
-import com.wangtao.tools.util.ThymeleafUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 import org.xhtmlrenderer.pdf.PDFCreationListener;
@@ -25,7 +24,7 @@ import java.util.Map;
  * @author wangtao
  * Created at 2026-11-20
  */
-public class PdfDocumentCreator implements DocumentCreator {
+public class PdfDocumentCreator extends AbstractDocumentCreator {
 
     /**
      * 水印文字字体文件（fonts 目录内），以内嵌方式写入 PDF，任何阅读器均可显示
@@ -70,9 +69,17 @@ public class PdfDocumentCreator implements DocumentCreator {
         return INSTANCE;
     }
 
+    /**
+     * @return 当前创建器对应的文档类型
+     */
+    @Override
+    protected DocumentType documentType() {
+        return DocumentType.PDF;
+    }
+
     @Override
     public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
-        String html = ThymeleafUtils.eval(templatePath, data);
+        String html = eval(templatePath, data);
         ITextRenderer renderer = new ITextRenderer();
         // 自动注册 fonts 目录下的字体，模板 CSS font-family 写字体族名即可命中；
         // 相对路径由 openpdf 自动回退 classpath 加载，jar 包与本地文件系统均兼容
