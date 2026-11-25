@@ -15,7 +15,7 @@ public interface DocumentCreator {
      * 模板中标识当前输出文档类型的变量名（值为 {@link DocumentType} 的枚举名，如 WORD、PDF），
      * 模板可据此做条件渲染，例如 word 与 pdf 使用不同的字体
      */
-    String DOCUMENT_TYPE = "documentType";
+    String DOCUMENT_TYPE = "_documentType";
 
     /**
      * 创建文档（核心方法，实现类只需实现此方法）
