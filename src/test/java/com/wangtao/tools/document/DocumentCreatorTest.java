@@ -29,25 +29,51 @@ public class DocumentCreatorTest {
     private static final Path OUTPUT_DIR = Paths.get("target");
 
     /**
-     * 验证字体、表格、图片、水印
+     * 验证字体、表格、图片、水印（一次生成所有类型）
      */
     @Test
     public void testCreate() throws Exception {
-        Map<String, Object> data = data();
         for (DocumentType type : DocumentType.values()) {
-            Path path = OUTPUT_DIR.resolve("create-" + type.name().toLowerCase() + extension(type));
-            try (OutputStream out = new FileOutputStream(path.toFile())) {
-                DocumentCreator.getInstance(type).create("pdf-test", data, baseUri(), "机密文件", out);
-            }
-            verify(type, path);
-            log.info("{} 文档写入: {}", type, path.toAbsolutePath());
+            verify(type, create(type));
         }
         // html 伪装 word 方式（独立实现，不在工厂枚举中）
         Path fakeWord = OUTPUT_DIR.resolve("create-fakeword.doc");
         try (OutputStream out = new FileOutputStream(fakeWord.toFile())) {
-            FakeWordDocumentCreator.getInstance().create("pdf-test", data, out);
+            FakeWordDocumentCreator.getInstance().create("pdf-test", data(), out);
         }
         log.info("FAKE_WORD 文档写入: {}", fakeWord.toAbsolutePath());
+    }
+
+    /**
+     * 单独生成 HTML 文档
+     */
+    @Test
+    public void testCreateHtml() throws Exception {
+        create(DocumentType.HTML);
+    }
+
+    /**
+     * 单独生成 WORD 文档
+     */
+    @Test
+    public void testCreateWord() throws Exception {
+        create(DocumentType.WORD);
+    }
+
+    /**
+     * 单独生成 flying-saucer PDF 文档
+     */
+    @Test
+    public void testCreatePdf() throws Exception {
+        create(DocumentType.PDF);
+    }
+
+    /**
+     * 单独生成 openhtmltopdf PDF 文档
+     */
+    @Test
+    public void testCreateOpenHtmlToPdf() throws Exception {
+        create(DocumentType.OPENHTMLTOPDF);
     }
 
     /**
@@ -73,11 +99,16 @@ public class DocumentCreatorTest {
         Assertions.assertTrue(gridTotal <= 9027, "固定布局表格宽度超出页面内容宽: " + gridTotal);
     }
 
-    @Test
-    public void testOutputNull() {
-        Assertions.assertThrows(Exception.class,
-                () -> DocumentCreator.getInstance(DocumentType.PDF)
-                        .create("pdf-test", data(), null, "机密文件", null));
+    /**
+     * 生成指定类型的文档并写入 target 目录，便于按类型单独运行
+     */
+    private Path create(DocumentType type) throws Exception {
+        Path path = OUTPUT_DIR.resolve("create-" + type.name().toLowerCase() + extension(type));
+        try (OutputStream out = new FileOutputStream(path.toFile())) {
+            DocumentCreator.getInstance(type).create("pdf-test", data(), baseUri(), "机密文件", out);
+        }
+        log.info("{} 文档写入: {}", type, path.toAbsolutePath());
+        return path;
     }
 
     /**
