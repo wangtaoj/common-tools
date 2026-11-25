@@ -36,12 +36,6 @@ public class DocumentCreatorTest {
         for (DocumentType type : DocumentType.values()) {
             verify(type, create(type));
         }
-        // html 伪装 word 方式（独立实现，不在工厂枚举中）
-        Path fakeWord = OUTPUT_DIR.resolve("create-fakeword.doc");
-        try (OutputStream out = new FileOutputStream(fakeWord.toFile())) {
-            FakeWordDocumentCreator.getInstance().create("customer-report", data(), out);
-        }
-        log.info("FAKE_WORD 文档写入: {}", fakeWord.toAbsolutePath());
     }
 
     /**
@@ -58,6 +52,14 @@ public class DocumentCreatorTest {
     @Test
     public void testCreateWord() throws Exception {
         create(DocumentType.WORD);
+    }
+
+    /**
+     * 单独生成 WORD 文档
+     */
+    @Test
+    public void testCreateFakeWord() throws Exception {
+        create(DocumentType.FAKE_WORD);
     }
 
     /**
