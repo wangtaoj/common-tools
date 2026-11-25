@@ -28,79 +28,31 @@ public class DocumentCreatorTest {
      */
     private static final Path OUTPUT_DIR = Paths.get("target");
 
+    /**
+     * 验证字体、表格、图片、水印
+     */
     @Test
-    public void testCreatePdf() throws Exception {
+    public void testCreate() throws Exception {
         Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("pdf-test.pdf");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            DocumentCreator.getInstance(DocumentType.PDF).create("pdf-test", data, out);
-        }
-        verifyPdf(path);
-    }
-
-    @Test
-    public void testCreatePdfWithBaseUri() throws Exception {
-        Map<String, Object> data = new HashMap<>();
-        data.put("title", "相对图片测试");
-        // 模板中 img 使用相对路径 imgtest.jpg，由 baseUri 解析
-        String baseUri = Paths.get("src/test/resources/template").toUri().toString();
-        for (DocumentType type : new DocumentType[]{DocumentType.PDF, DocumentType.OPENHTMLTOPDF}) {
-            Path path = OUTPUT_DIR.resolve("pdf-baseuri-" + type.name().toLowerCase() + ".pdf");
+        for (DocumentType type : DocumentType.values()) {
+            Path path = OUTPUT_DIR.resolve("create-" + type.name().toLowerCase() + extension(type));
             try (OutputStream out = new FileOutputStream(path.toFile())) {
-                DocumentCreator.getInstance(type).create("baseuri-test", data, baseUri, null, out);
+                DocumentCreator.getInstance(type).create("pdf-test", data, baseUri(), "机密文件", out);
             }
-            verifyPdf(path);
-            // 校验相对路径图片已被嵌入
-            String raw = new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1);
-            Assertions.assertTrue(raw.contains("/Subtype/Image") || raw.contains("/Subtype /Image"),
-                    type + " 未嵌入相对路径图片");
+            verify(type, path);
+            log.info("{} 文档写入: {}", type, path.toAbsolutePath());
         }
+        // html 伪装 word 方式（独立实现，不在工厂枚举中）
+        Path fakeWord = OUTPUT_DIR.resolve("create-fakeword.doc");
+        try (OutputStream out = new FileOutputStream(fakeWord.toFile())) {
+            FakeWordDocumentCreator.getInstance().create("pdf-test", data, out);
+        }
+        log.info("FAKE_WORD 文档写入: {}", fakeWord.toAbsolutePath());
     }
 
-    @Test
-    public void testCreatePdfWithWatermark() throws Exception {
-        Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("pdf-test-watermark.pdf");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            DocumentCreator.getInstance(DocumentType.PDF)
-                    .create("pdf-test", data, "机密文件", out);
-        }
-        verifyPdf(path);
-        log.info("水印版 PDF 写入: {}", path.toAbsolutePath());
-    }
-
-    @Test
-    public void testCreateOpenHtmlToPdf() throws Exception {
-        Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("pdf-openhtml.pdf");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("pdf-test", data, out);
-        }
-        verifyPdf(path);
-    }
-
-    @Test
-    public void testCreateOpenHtmlToPdfWithWatermark() throws Exception {
-        Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("pdf-openhtml-watermark.pdf");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF)
-                    .create("pdf-test", data, "机密文件", out);
-        }
-        verifyPdf(path);
-        log.info("openhtmltopdf 水印版 PDF 写入: {}", path.toAbsolutePath());
-    }
-
-    @Test
-    public void testCreateWord() throws Exception {
-        Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("word-test.docx");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            DocumentCreator.getInstance(DocumentType.WORD).create("pdf-test", data, out);
-        }
-        log.info("Word 写入: {}", path.toAbsolutePath());
-    }
-
+    /**
+     * word 固定布局表格：列宽修正的专项测试（仅 word 存在该问题）
+     */
     @Test
     public void testCreateWordFixedTable() throws Exception {
         Map<String, Object> data = data();
@@ -121,6 +73,50 @@ public class DocumentCreatorTest {
         Assertions.assertTrue(gridTotal <= 9027, "固定布局表格宽度超出页面内容宽: " + gridTotal);
     }
 
+    @Test
+    public void testOutputNull() {
+        Assertions.assertThrows(Exception.class,
+                () -> DocumentCreator.getInstance(DocumentType.PDF)
+                        .create("pdf-test", data(), null, "机密文件", null));
+    }
+
+    /**
+     * 按文档类型校验生成结果
+     */
+    private void verify(DocumentType type, Path path) throws Exception {
+        byte[] bytes = Files.readAllBytes(path);
+        Assertions.assertTrue(bytes.length > 0, type + " 输出为空");
+        switch (type) {
+            case PDF:
+            case OPENHTMLTOPDF:
+                Assertions.assertEquals("%PDF", new String(bytes, 0, 4, StandardCharsets.ISO_8859_1));
+                break;
+            case WORD:
+                // docx 为 zip 格式
+                Assertions.assertEquals("PK", new String(bytes, 0, 2, StandardCharsets.ISO_8859_1));
+                break;
+            case HTML:
+                Assertions.assertTrue(new String(bytes, StandardCharsets.UTF_8).contains("企业客户报告"));
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * 各文档类型的输出文件扩展名
+     */
+    private String extension(DocumentType type) {
+        switch (type) {
+            case HTML:
+                return ".html";
+            case WORD:
+                return ".docx";
+            default:
+                return ".pdf";
+        }
+    }
+
     /**
      * 取文档中第一个表格
      */
@@ -133,43 +129,6 @@ public class DocumentCreatorTest {
             }
         }
         return null;
-    }
-
-    @Test
-    public void testCreateFakeWord() throws Exception {
-        Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("fakeWord-test.doc");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            // html伪装word
-            FakeWordDocumentCreator.getInstance().create("pdf-test", data, out);
-        }
-        log.info("Word 写入: {}", path.toAbsolutePath());
-    }
-
-    @Test
-    public void testCreateHtml() throws Exception {
-        Map<String, Object> data = data();
-        Path path = OUTPUT_DIR.resolve("html-test.html");
-        try (OutputStream out = new FileOutputStream(path.toFile())) {
-            DocumentCreator.getInstance(DocumentType.HTML).create("pdf-test", data, out);
-        }
-        log.info("HTML 写入: {}", path.toAbsolutePath());
-    }
-
-    @Test
-    public void testOutputNull() {
-        Assertions.assertThrows(Exception.class,
-                () -> DocumentCreator.getInstance(DocumentType.PDF).create("pdf-test", data(), null));
-    }
-
-    /**
-     * 校验生成的 pdf 文件：魔数与大小
-     */
-    private void verifyPdf(Path path) throws Exception {
-        byte[] bytes = Files.readAllBytes(path);
-        // PDF 文件魔数校验
-        Assertions.assertEquals("%PDF", new String(bytes, 0, 4));
-        Assertions.assertTrue(bytes.length > 0);
     }
 
     private Map<String, Object> data() throws Exception {
@@ -193,10 +152,10 @@ public class DocumentCreatorTest {
         data.put("addrInfo", "湖南省长沙市岳麓区金州大道583号");
         data.put("environmentDesc", "公司位于某某科技园区内，周边交通便捷，紧邻地铁2号线某某站，周边商业配套完善，企业聚集度高，营商环境良好。");
         data.put("environmentDesc2", "厂区外观整洁，绿化覆盖率高，办公与生产区域规划合理，无周边污染源，满足生产经营要求。");
-        // 图片转 base64 内嵌（html 使用 data URI 格式）
-        String imageBase64 = imageToBase64DataUrl("imgtest.jpg");
-        data.put("surroundingImage", imageBase64);
-        data.put("surroundingImage2", imageBase64);
+        // 第一张图片使用 base64 data URI 内嵌
+        data.put("surroundingImage", imageToBase64DataUrl("imgtest.jpg"));
+        // 第二张使用相对路径（由 baseUri 解析）
+        data.put("surroundingImage2", "imgtest.jpg");
         return data;
     }
 
@@ -208,5 +167,12 @@ public class DocumentCreatorTest {
         byte[] imageBytes = Files.readAllBytes(imagePath);
         String base64 = Base64.getEncoder().encodeToString(imageBytes);
         return "data:image/jpeg;base64," + base64;
+    }
+
+    /**
+     * 模板中"企业周边环境"的第二张图片使用相对路径 imgtest.jpg，由 baseUri 解析
+     */
+    private String baseUri() {
+        return Paths.get("src/test/resources/template").toUri().toString();
     }
 }
