@@ -8,6 +8,8 @@ import org.docx4j.jaxb.Context;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.NumberingDefinitionsPart;
 import org.docx4j.wml.CTBorder;
+import org.docx4j.wml.RFonts;
+import org.docx4j.wml.STHint;
 import org.docx4j.wml.SectPr;
 import org.docx4j.wml.Tbl;
 import org.docx4j.wml.TblBorders;
@@ -15,24 +17,23 @@ import org.docx4j.wml.TblGrid;
 import org.docx4j.wml.TblGridCol;
 import org.docx4j.wml.TblWidth;
 import org.docx4j.wml.Tc;
-import org.docx4j.wml.TcPrInner.TcBorders;
 import org.docx4j.wml.TcPr;
+import org.docx4j.wml.TcPrInner.TcBorders;
 import org.docx4j.wml.Tr;
 
 import javax.xml.bind.JAXBElement;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 
 /**
  * 基于 docx4j 的 Word 文档创建器：html 转 docx（Open XML），生成真正的 Word 文档
  * <p>html 由 {@link ThymeleafUtils} 渲染，再经 docx4j 的 XHTML importer 转换，
  * 支持 h1-h6、段落、表格（含样式）、图片（含 base64 data URI）、列表等
- * <p>注册到 fonts 目录的字体（见 {@link FontRegistrar}）在模板 CSS font-family 中指定后，
- * docx 内会引用对应字体名称（需目标机器安装该字体，docx4j 不内嵌字体）
+ * <p>在模板 CSS font-family 中指定后，docx 内会引用对应字体名称（需目标机器安装该字体，docx4j 不内嵌字体）
  *
  * @author wangtao
  * Created at 2026-11-21
@@ -40,10 +41,40 @@ import java.util.LinkedHashMap;
 @Slf4j
 public class WordDocumentCreator implements DocumentCreator {
 
+    /**
+     * 常用中文字体（Windows / macOS
+     */
+    private static final String[] COMMON_FONT_FAMILIES = {
+            // Windows 宋体（含别名、新宋体）
+            "SimSun", "宋体", "NSimSun", "新宋体",
+            // Windows 微软雅黑
+            "Microsoft YaHei", "微软雅黑",
+            // 其它常用 Windows 中文字体
+            "SimHei", "黑体", "KaiTi", "楷体", "FangSong", "仿宋", "DengXian", "等线",
+            // macOS 宋体
+            "Songti SC", "STSong", "华文宋体",
+            // 本项目内置默认字体（classpath fonts 目录）
+            "LXGW WenKai", "霞鹜文楷"
+    };
+
     private static final WordDocumentCreator INSTANCE = new WordDocumentCreator();
 
     private WordDocumentCreator() {
-
+        /*
+         * 注册字体映射
+         * XHTMLImporterImpl 在解析 CSS font-family 时，会按顺序去内部的 fontFamilyToFont 映射表中查找对应的 Word RFonts 对象
+         */
+        for (String family : COMMON_FONT_FAMILIES) {
+            RFonts rFonts = Context.getWmlObjectFactory().createRFonts();
+            rFonts.setAscii(family);
+            rFonts.setHAnsi(family);
+            // 中文走 eastAsia
+            rFonts.setEastAsia(family);
+            // 提示 Word 对模糊字符（如标点）优先使用东亚字体
+            rFonts.setHint(STHint.EAST_ASIA);
+            // 注意这里线程不安全, 底层是静态的hashmap
+            XHTMLImporterImpl.addFontMapping(family, rFonts);
+        }
     }
 
     /**

@@ -69,6 +69,11 @@ html "变成 Word 文档"有三种技术路线，本质完全不同，按兼容�
 ### 字体
 
 - docx **不内嵌字体**。模板 CSS `font-family` 中指定的字体名会写入 docx 的字体引用，**打开文档的机器必须安装该字体**，否则 Word 自动用后备字体替换显示（内容不丢、字形不同）
+- docx4j 的字体映射机制：内置映射只有 `serif` → Times New Roman、`sans-serif` → Arial、`monospace` → Courier New，以及少量微软拉丁字体；**其它字体族名（尤其中文字体）默认视为"无映射"，会回退到 fallback 链的下一个（通常是 serif → Times New Roman）**
+- `WordDocumentCreator` 中已经注册常用中文字体映射）：
+  1. 把常用中文字体（Windows 宋体 / 微软雅黑 / 黑体 / 楷体 / 仿宋 / 等线、macOS 宋体、内置霞鹜文楷等）注册为"映射到自身"，避免回退成 Times New Roman
+  2. 映射对象同时设置 `w:ascii` / `w:hAnsi`（拉丁字符）与 `w:eastAsia`（中文），docx4j 转换时直接复用该映射，无需转换后遍历补属性
+  3. 模板使用列表之外的字体时不会自动映射（仍回退 serif → Times New Roman），需在 `COMMON_FONT_FAMILIES` 中追加
 - 如需内嵌字体进 docx（`fontTable.xml` + `odttf` 混淆字体），docx4j 支持但配置繁琐，且部分字体许可证禁止内嵌，一般不建议
 - 字体族名、字体格式、常用字体清单见文末「字体」章节
 
