@@ -84,18 +84,13 @@ public class OpenHtmlToPdfDocumentCreator implements DocumentCreator {
     }
 
     @Override
-    public void create(String templatePath, Map<String, Object> data, OutputStream out) {
-        createWithWatermark(templatePath, data, null, out);
-    }
-
-    @Override
-    public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
+    public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
         String html = ThymeleafUtils.eval(templatePath, data);
         ByteArrayOutputStream rendered = new ByteArrayOutputStream();
         try {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             registerFonts(builder);
-            builder.withHtmlContent(html, null);
+            builder.withHtmlContent(html, baseUri);
             builder.toStream(rendered);
             builder.run();
         } catch (Exception e) {

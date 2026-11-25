@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,12 +39,31 @@ public class DocumentCreatorTest {
     }
 
     @Test
+    public void testCreatePdfWithBaseUri() throws Exception {
+        Map<String, Object> data = new HashMap<>();
+        data.put("title", "相对图片测试");
+        // 模板中 img 使用相对路径 imgtest.jpg，由 baseUri 解析
+        String baseUri = Paths.get("src/test/resources/template").toUri().toString();
+        for (DocumentType type : new DocumentType[]{DocumentType.PDF, DocumentType.OPENHTMLTOPDF}) {
+            Path path = OUTPUT_DIR.resolve("pdf-baseuri-" + type.name().toLowerCase() + ".pdf");
+            try (OutputStream out = new FileOutputStream(path.toFile())) {
+                DocumentCreator.getInstance(type).create("baseuri-test", data, baseUri, null, out);
+            }
+            verifyPdf(path);
+            // 校验相对路径图片已被嵌入
+            String raw = new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1);
+            Assertions.assertTrue(raw.contains("/Subtype/Image") || raw.contains("/Subtype /Image"),
+                    type + " 未嵌入相对路径图片");
+        }
+    }
+
+    @Test
     public void testCreatePdfWithWatermark() throws Exception {
         Map<String, Object> data = data();
         Path path = OUTPUT_DIR.resolve("pdf-test-watermark.pdf");
         try (OutputStream out = new FileOutputStream(path.toFile())) {
             DocumentCreator.getInstance(DocumentType.PDF)
-                    .createWithWatermark("pdf-test", data, "机密文件", out);
+                    .create("pdf-test", data, "机密文件", out);
         }
         verifyPdf(path);
         log.info("水印版 PDF 写入: {}", path.toAbsolutePath());
@@ -65,7 +85,7 @@ public class DocumentCreatorTest {
         Path path = OUTPUT_DIR.resolve("pdf-openhtml-watermark.pdf");
         try (OutputStream out = new FileOutputStream(path.toFile())) {
             DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF)
-                    .createWithWatermark("pdf-test", data, "机密文件", out);
+                    .create("pdf-test", data, "机密文件", out);
         }
         verifyPdf(path);
         log.info("openhtmltopdf 水印版 PDF 写入: {}", path.toAbsolutePath());

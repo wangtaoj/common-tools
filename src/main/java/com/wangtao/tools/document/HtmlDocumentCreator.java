@@ -27,18 +27,13 @@ public class HtmlDocumentCreator implements DocumentCreator {
     public static HtmlDocumentCreator getInstance() {
         return INSTANCE;
     }
-    @Override
-    public void create(String templatePath, Map<String, Object> data, OutputStream out) {
-        createWithWatermark(templatePath, data, null, out);
-    }
-
     /**
-     * 会忽略水印
+     * 会忽略水印与 baseUri
      * <p>
      * {@inheritDoc}
      */
     @Override
-    public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
+    public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
         // 流式渲染，避免中间 String 全量拷贝；
         // Writer 只 flush 不 close，out 的关闭由调用方负责
         Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);

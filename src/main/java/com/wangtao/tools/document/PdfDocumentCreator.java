@@ -71,18 +71,13 @@ public class PdfDocumentCreator implements DocumentCreator {
     }
 
     @Override
-    public void create(String templatePath, Map<String, Object> data, OutputStream out) {
-        createWithWatermark(templatePath, data, null, out);
-    }
-
-    @Override
-    public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
+    public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
         String html = ThymeleafUtils.eval(templatePath, data);
         ITextRenderer renderer = new ITextRenderer();
         // 自动注册 fonts 目录下的字体，模板 CSS font-family 写字体族名即可命中；
         // 相对路径由 openpdf 自动回退 classpath 加载，jar 包与本地文件系统均兼容
         FontRegistrar.registerTo(renderer.getFontResolver());
-        renderer.setDocumentFromString(html, null);
+        renderer.setDocumentFromString(html, baseUri);
         renderer.layout();
         boolean hasWatermark = StringUtils.isNotBlank(watermarkText);
         // 水印或页码均需要页面事件监听器，页面布局完成后页数已确定，

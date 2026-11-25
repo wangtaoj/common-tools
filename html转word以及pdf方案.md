@@ -6,7 +6,12 @@
 
 ```java
 DocumentCreator creator = DocumentCreator.getInstance(DocumentType.WORD);
+// 无水印
 creator.create("模板路径", dataMap, outputStream);
+// 带水印
+creator.create("模板路径", dataMap, "水印文字", outputStream);
+// 带水印 + baseUri（解析模板中相对路径的图片等资源）
+creator.create("模板路径", dataMap, baseUri, "水印文字", outputStream);
 ```
 
 ---
@@ -148,7 +153,8 @@ DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, o
 
 ### 图片
 
-- 支持 base64 data URI 内嵌（推荐，单文件交付无外部依赖）、相对路径（相对 baseUrl）、http(s) URL
+- 支持 base64 data URI 内嵌（推荐，单文件交付无外部依赖）、相对路径、http(s) URL
+- 相对路径图片通过 `create(templatePath, data, baseUri, watermarkText, out)` 的 `baseUri` 参数解析（如 `new File("模板目录").toURI().toString()`；两种 PDF 实现与 word 实现均支持）
 - data URI 图片由布局引擎解码后嵌入 PDF，尺寸跟随 html `width`/CSS 声明
 
 ### 其它转换能力与限制

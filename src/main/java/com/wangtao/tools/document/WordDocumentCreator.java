@@ -84,18 +84,13 @@ public class WordDocumentCreator implements DocumentCreator {
         return INSTANCE;
     }
 
-    @Override
-    public void create(String templatePath, Map<String, Object> data, OutputStream out) {
-        createWithWatermark(templatePath, data, null, out);
-    }
-
     /**
      * 会忽略水印
      * <p>
      * {@inheritDoc}
      */
     @Override
-    public void createWithWatermark(String templatePath, Map<String, Object> data, String watermarkText, OutputStream out) {
+    public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
         String html = ThymeleafUtils.eval(templatePath, data);
         try {
             // 空白 docx 包，列表编号支持需挂载默认 numbering 定义
@@ -108,7 +103,7 @@ public class WordDocumentCreator implements DocumentCreator {
             // html 转换为 docx 内容元素并挂到主文档
             XHTMLImporterImpl importer = new XHTMLImporterImpl(wordMLPackage);
             wordMLPackage.getMainDocumentPart().getContent()
-                    .addAll(importer.convert(html, null));
+                    .addAll(importer.convert(html, baseUri));
 
             // 修正表格：统一单元格边框到表级（兼容 WPS 渲染）、修正固定布局表格列宽
             normalizeTables(wordMLPackage);
