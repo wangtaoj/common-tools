@@ -145,6 +145,8 @@ public class DocumentCreatorTest {
                 return ".html";
             case WORD:
                 return ".docx";
+            case FAKE_WORD:
+                return ".doc";
             default:
                 return ".pdf";
         }

@@ -17,7 +17,8 @@
             size: A4;
             margin: 40pt;
         }
-        body {
+        /* PDF使用项目内嵌字体 */
+        .pdf-font {
             font-family: "LXGW WenKai", serif;
         }
         /* Word 无法内嵌字体，改用目标机器通常已安装的宋体 */
@@ -59,7 +60,7 @@
         }
     </style>
 </head>
-<body th:classappend="${_documentType == 'WORD'} ? 'word-font'">
+<body th:classappend="${_documentType == 'PDF' or _documentType == 'OPENHTMLTOPDF' } ? 'pdf-font' : 'word-font'">
 <h1 style="text-align: center">企业客户报告</h1>
 <p style="text-align: center" th:text="${#temporals.format(reportTime, 'yyyy年MM月dd日 HH:mm:ss')}">2026年01月01日 00:00:00</p>
 
