@@ -100,7 +100,7 @@ public class WordDocumentCreator extends AbstractDocumentCreator {
     public void create(String templatePath, Map<String, Object> data, String baseUri, String watermarkText, OutputStream out) {
         String html = eval(templatePath, data);
         try {
-            // 空白 docx 包，列表编号支持需挂载默认 numbering 定义
+            // 空白 docx 包(A4大小, 页边距为1英寸)，列表编号支持需挂载默认 numbering 定义
             WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.createPackage();
             // 针对<ul>以及<ol>定义编号规则
             NumberingDefinitionsPart ndp = new NumberingDefinitionsPart();

@@ -71,6 +71,31 @@ html "变成 Word 文档"有三种技术路线，本质完全不同，按兼容�
 
 生成的 docx 是 **Open XML 格式**（ZIP + XML，ECMA-376 标准），Word 2007+ 原生支持，WPS / LibreOffice / macOS textutil 等第三方工具均可正常解析。
 
+### 页面大小与页边距
+
+- **模板 CSS 的 `@page` 对 docx 不生效**：docx4j-ImportXHTML 不解析 `@page` 的 `size` / `margin`，模板中写 `@page { size: A4; margin: 25.4mm; }` 不会写入 docx（实测生成的 `sectPr` 仍是下文默认值）。模板保留 `@page` 即可同一模板用于 PDF 时仍然生效，对 Word 无副作用
+- 生成的 docx 页面设置来自 docx4j 创建空白包时的默认值，默认 **A4纸大小以及1英寸的页边距**（单位为 twips，1440 twips = 1 英寸 = 72pt = 25.4mm，11907×16839 twips ≈ 210×297mm）：
+
+```xml
+<w:sectPr>
+    <w:pgSz w:w="11907" w:h="16839" w:code="9"/>
+    <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+</w:sectPr>
+```
+
+- 调整全局默认：在 classpath 下放置 `docx4j.properties`（本项目当前没有该文件，即使用默认值）：
+
+```properties
+# 纸张：枚举类: PageSizePaper, LETTER / LEGAL / A3 / A4 / A5 / B4JIS
+docx4j.PageSize=A4
+# 横向：true / false
+docx4j.PageOrientationLandscape=false
+# 页边距预设：枚举类: MarginsWellKnown, NORMAL(1 英寸) / NARROW(0.5 英寸) / MODERATE / WIDE(左右 2 英寸)
+docx4j.PageMargins=NORMAL
+```
+
+- 如需按文档单独设置纸张 / 边距，当前 `WordDocumentCreator` 未开放参数，可在转换后修改 `sectPr` 的 `pgSz` / `pgMar`（单位 twips）；`WordDocumentCreator` 修正固定布局表格列宽时按「页面宽 - 左右边距」计算内容宽，修改页面设置后会自适应
+
 ### 字体
 
 - docx **不内嵌字体**。模板 CSS `font-family` 中指定的字体名会写入 docx 的字体引用，**打开文档的机器必须安装该字体**，否则 Word 自动用后备字体替换显示（内容不丢、字形不同）
@@ -140,6 +165,25 @@ DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, o
 - openhtmltopdf 1.0.x 支持 **JDK 8+**（1.0.10 为最后一个支持 JDK 8 的正式版本，其内置 PDFBox 2.0.24 同样兼容 JDK 8）
 
 生成的 PDF 为标准格式，任意阅读器可打开。
+
+### 页面大小与页边距
+
+- 由模板 CSS 的 `@page` 控制，两种实现均生效：
+
+```css
+@page {
+    size: A4;
+    margin: 25.4mm;
+}
+```
+
+- `size` 的写法：
+  - 命名纸张：A3、A4、A5、B3、B4、LETTER、LEGAL、LEDGER
+  - 显式尺寸：`size: 210mm 297mm;`
+  - 方向：`size: A4 landscape;`（或 `portrait`）
+- **两种实现的命名纸张不完全一致**：flying-saucer 额外支持 **B5**；openhtmltopdf 1.0.10 只认 `a3 / a4 / a5 / b3 / b4 / letter / legal / ledger`，其它名称（如 B5、A0-A2）会被忽略并回退默认 A4（实测 `size: B5` 在 openhtmltopdf 下仍输出 A4）。需要这些纸型时改用显式尺寸，如 `size: 176mm 250mm;`
+- `margin`：`margin` 四边统一，也可用 `margin-top` / `margin-right` / `margin-bottom` / `margin-left` 分别设置；单位支持 pt / mm / cm / in
+- openhtmltopdf 额外支持 CSS 分页媒体边距盒（`@top-center`、`@bottom-right` 等）放置页眉页脚；flying-saucer 不支持边距盒，页眉页脚需自行用页面事件绘制（本库的页码、水印即按此实现）
 
 ### 字体
 
