@@ -2,11 +2,18 @@ package com.wangtao.tools.util;
 
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-import org.thymeleaf.extras.java8time.dialect.Java8TimeDialect;
+import org.thymeleaf.context.IExpressionContext;
+import org.thymeleaf.standard.StandardDialect;
+import org.thymeleaf.standard.expression.AbstractStandardConversionService;
+import org.thymeleaf.standard.expression.StandardConversionService;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 import java.io.Writer;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Map;
 
 /**
@@ -26,11 +33,18 @@ public final class ThymeleafUtils {
         templateResolver.setSuffix(".html");
         templateResolver.setTemplateMode(TemplateMode.HTML);
         templateResolver.setCharacterEncoding("UTF-8");
+        String cacheFlg = System.getProperty("thymeleaf.cache.enabled", "true");
+        // 开发期可通过jvm启动参数禁用模板缓存, 修改html模板文件后只需编译一下不用重启项目就能生效
+        templateResolver.setCacheable(Boolean.parseBoolean(cacheFlg));
+
+        StandardDialect standardDialect = new StandardDialect();
+        // 设置自定义的类型转换服务
+        standardDialect.setConversionService(new CustomConversionService());
 
         ENGINE = new TemplateEngine();
         ENGINE.setTemplateResolver(templateResolver);
-        // 注册 JSR310 方言，模板中可通过 #temporals 格式化 LocalDate/LocalDateTime 等
-        ENGINE.addDialect(new Java8TimeDialect());
+        // 设置方言
+        ENGINE.setDialect(standardDialect);
     }
 
     private ThymeleafUtils() {
@@ -63,5 +77,32 @@ public final class ThymeleafUtils {
             context.setVariables(data);
         }
         ENGINE.process(templatePath, context, writer);
+    }
+
+    /**
+     * 自定义类型转换器, 增加LocalDateTime、LocalDate、LocalTime、Decimal的类型转换
+     * 默认的{@link StandardConversionService}实现是通过调用toString方法进行转换
+     * 在模板中使用${{}}语法就会进行类型转换, 将对象转成字符串
+     * 默认的日期格式不满足要求时, 通过如下方法转换
+     * ${#temporals.format(reportDate, 'yyyyMMdd')}
+     */
+    private static class CustomConversionService extends AbstractStandardConversionService {
+
+        @Override
+        protected String convertToString(IExpressionContext context, Object object) {
+            if (object instanceof LocalDateTime) {
+                return DateUtils.format((LocalDateTime) object);
+            }
+            if (object instanceof LocalDate) {
+                return DateUtils.format((LocalDate) object);
+            }
+            if (object instanceof LocalTime) {
+                return DateUtils.format((LocalTime) object);
+            }
+            if (object instanceof BigDecimal) {
+                return ((BigDecimal) object).stripTrailingZeros().toPlainString();
+            }
+            return super.convertToString(context, object);
+        }
     }
 }

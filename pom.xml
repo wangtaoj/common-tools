@@ -32,8 +32,7 @@
     <mockito-junit.version>4.5.1</mockito-junit.version>
     <junit-platform-launcher.version>1.8.2</junit-platform-launcher.version>
     <freemarker.version>2.3.32</freemarker.version>
-    <thymeleaf.version>3.0.15.RELEASE</thymeleaf.version>
-    <thymeleaf-extras-java8time.version>3.0.4.RELEASE</thymeleaf-extras-java8time.version>
+    <thymeleaf.version>3.1.7.RELEASE</thymeleaf.version>
     <flying-saucer-pdf.version>9.4.1</flying-saucer-pdf.version>
     <poi.version>5.4.1</poi.version>
     <docx4j.version>8.3.15</docx4j.version>
@@ -134,11 +133,6 @@
       <groupId>org.thymeleaf</groupId>
       <artifactId>thymeleaf</artifactId>
       <version>${thymeleaf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.thymeleaf.extras</groupId>
-      <artifactId>thymeleaf-extras-java8time</artifactId>
-      <version>${thymeleaf-extras-java8time.version}</version>
     </dependency>
 
     <!-- 注意: 9.5.0 起要求 JDK11, 9.13.0 要求 JDK17 -->
