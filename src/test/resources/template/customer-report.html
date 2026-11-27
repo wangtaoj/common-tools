@@ -12,6 +12,13 @@
     <![endif]-->
     <meta charset="UTF-8"/>
     <title>企业客户报告</title>
+    <bookmarks th:if="${_documentType == 'PDF' or _documentType == 'OPENHTMLTOPDF'}">
+        <bookmark name="企业客户报告" href="#top">
+            <bookmark name="一、客户基本信息" href="#sec1"/>
+            <bookmark name="二、企业周边环境" href="#sec2"/>
+            <bookmark name="三、备注" href="#sec2"/>
+        </bookmark>
+    </bookmarks>
     <style>
         @page {
             size: A4;
@@ -61,10 +68,10 @@
     </style>
 </head>
 <body th:classappend="${_documentType == 'PDF' or _documentType == 'OPENHTMLTOPDF' } ? 'pdf-font' : 'word-font'">
-<h1 style="text-align: center">企业客户报告</h1>
+<h1 id="top" style="text-align: center">企业客户报告</h1>
 <p style="text-align: center" th:text="${#temporals.format(reportTime, 'yyyy年MM月dd日 HH:mm:ss')}">2026年01月01日 00:00:00</p>
 
-<h2>一、客户基本信息</h2>
+<h2 id="sec1">一、客户基本信息</h2>
 <table class="info-table">
     <colgroup>
         <col style="width: 20%;" />
@@ -135,13 +142,13 @@
     </tr>
 </table>
 
-<h2>二、企业周边环境</h2>
+<h2 id="sec2">二、企业周边环境</h2>
 <p class="remark" th:text="${environmentDesc}">-</p>
 <img class="env-image" th:src="${surroundingImage}"/>
 <p class="remark" th:text="${environmentDesc2}">-</p>
 <img class="env-image" th:src="${surroundingImage2}"/>
 
-<h2>3、备注</h2>
+<h2 id="sec3">3、备注</h2>
 <ul>
     <li>企业征信良好</li>
     <li>经营状态良好</li>

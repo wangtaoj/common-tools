@@ -215,6 +215,39 @@ DocumentCreator.getInstance(DocumentType.OPENHTMLTOPDF).create("模板", data, o
 - 相对路径图片通过 `create(templatePath, data, baseUri, watermarkText, out)` 的 `baseUri` 参数解析（如 `new File("模板目录").toURI().toString()`；两种 PDF 实现与 word 实现均支持）
 - data URI 图片由布局引擎解码后嵌入 PDF，尺寸跟随 html `width`/CSS 声明
 
+### 目录（PDF 大纲）
+
+- **flying-saucer 自动生成大纲**：按 html 中的 `h1`–`h6` 标签生成 PDF 目录，层级即标题级别（h1 → 1 级，h2 → 2 级），标题文字取元素文本，模板无需任何额外标记（实现为 `ITextOutputDevice.writeOutline` 调用 `HTMLOutline.generate`）
+- **openhtmltopdf 1.0.10 不会自动生成**：没有扫描 h1–h6 的逻辑，CSS 的 `bookmark-level` / `bookmark-label` 也不支持（写了会被忽略，实测无效果），必须显式声明书签标记：
+
+```html
+<head>
+    <bookmarks>
+        <bookmark name="企业客户报告" href="#top">
+            <bookmark name="一、客户基本信息" href="#sec1"/>
+            <bookmark name="二、企业周边环境" href="#sec2"/>
+        </bookmark>
+    </bookmarks>
+</head>
+<body>
+    <h1 id="top">企业客户报告</h1>
+    <h2 id="sec1">一、客户基本信息</h2>
+    <h2 id="sec2">二、企业周边环境</h2>
+    ...
+</body>
+```
+
+- 书签规则（实测）：
+  - `<bookmarks>` 必须是 `<head>` 或 `<body>` 的直接子元素
+  - 每个条目 `<bookmark name="大纲标题" href="#元素id"/>`：`name` 是纯文本标题（不会自动取标题元素的文本），`href` 指向页面元素的 `id`，目标应放在块级元素上
+  - 嵌套 `<bookmark>` 形成层级；平铺写则都是同级
+  - `href` 找不到目标时打 WARN 日志并回退到第一页
+- 两种实现共用同一模板时，`<bookmarks>` 放在哪里会影响 flying-saucer：
+  - 放在 `<head>`：flying-saucer 只从 `<head>` 读取书签（`loadBookmarks` 只扫描 head），读到显式书签后就不再按标题自动生成。
+  - 放在 `<body>`：openhtmltopdf 读 head / body 都能生效；flying-saucer 不扫描 body，会忽略这段标记，仍按 h1–h6 自动生成目录。结果是两边都有目录，但 flying-saucer 的标题文字、层级取自正文标题，可能与手写书签不一致
+- `id` 的作用：`href="#xxx"` 靠页面元素上的 `id` 找目标，这是显式书签（两种实现都一样）定位所必需的。若 flying-saucer 走自动大纲，它不需要这些 `id`，补上也不会产生重复或多余的目录项（即无副作用）
+- 局限：`name` 与正文标题是两份文本，需要手动保持同步（静态标题直接写在模板里；动态标题可用 Thymeleaf 表达式生成）
+
 ### 其它转换能力与限制
 
 - 两种实现均使用 **XML 解析器**（非容错 html parser）解析模板，**html 必须是合法 XHTML**：`<meta/>`、`<img/>`、`<br/>` 等必须自闭合，属性必须有引号，Thymeleaf HTML 模式的输出满足要求；模板中的 Word HTML 元数据条件注释（前文"页面视图控制"）对两者均无害
